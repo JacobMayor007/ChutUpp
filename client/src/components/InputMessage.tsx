@@ -8,6 +8,7 @@ type MessageBoxProps = {
   heightInputBox?: string;
   value: string;
   onChangeValue: (value: string) => void;
+  onKeyDown: (e: any) => void;
   type?: string;
   className?: string;
 };
@@ -18,6 +19,7 @@ export default function MessageBox({
   heightIcon,
   widthIcon,
   value,
+  onKeyDown,
   onChangeValue,
   heightInputBox,
   className,
@@ -33,12 +35,7 @@ export default function MessageBox({
           contentEditable={false}
           style={{ resize: "none" }}
           onChange={(e) => onChangeValue(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              onChangeValue("");
-            }
-          }}
+          onKeyDown={onKeyDown}
           className={`h-full text-white placeholder:text-slate-700 outline-0 w-full overflow-hidden `}
         />
       </div>

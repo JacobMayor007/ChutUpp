@@ -61,7 +61,7 @@ func (pb *PostgreDB) createUserTable() error {
 		create or replace function set_timestamp()
 		returns trigger AS $$
 		begin
-			nnew.updated_at = now();
+			new.updated_at = NOW();
 			return new;
 		end;
 		$$ language plpgsql;
@@ -78,9 +78,12 @@ func (pb *PostgreDB) createUserTable() error {
         create trigger update_user_timestamp
         before update on users
         for each row
-        execute function set_timestamp();`
+        execute function set_timestamp();
+		`
 	_, err = pb.Db.Exec(trigger)
 
-	fmt.Printf("error in trigger: %s", err)
+	if err != nil {
+		fmt.Printf("error in trigger: %v", err)
+	}
 	return err
 }
