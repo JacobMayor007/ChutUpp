@@ -9,6 +9,7 @@ type MessageBoxProps = {
   value: string;
   onChangeValue: (value: string) => void;
   onKeyDown: (e: any) => void;
+  onClick: () => void;
   type?: string;
   className?: string;
 };
@@ -21,6 +22,7 @@ export default function MessageBox({
   value,
   onKeyDown,
   onChangeValue,
+  onClick,
   heightInputBox,
   className,
 }: MessageBoxProps) {
@@ -44,6 +46,7 @@ export default function MessageBox({
         width={widthIcon}
         height={heightIcon}
         color="white"
+        onClick={onClick}
       />
     </div>
   );

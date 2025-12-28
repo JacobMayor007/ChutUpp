@@ -6,16 +6,14 @@ import (
 )
 
 type Message struct {
+	Type        string `json:"type"` // "message" or "typing"
 	SenderID    string `json:"sender_id"`
 	RecipientID string `json:"recipient_id"`
 	Content     string `json:"content"`
 }
 
 type Hub struct {
-	// Mutex to protect the Clients map from concurrent access
-	// (Prevents crashes if you check "who is online" while users are connecting)
-	mu sync.RWMutex
-
+	mu         sync.RWMutex
 	Clients    map[string]*Client
 	Broadcast  chan Message
 	Register   chan *Client
@@ -38,7 +36,6 @@ func (h *Hub) Run() {
 			h.mu.Lock()
 			h.Clients[client.UserID] = client
 			h.mu.Unlock()
-			// PRINT WHEN SOMEONE JOINS
 			log.Printf("User Joined: %s | Total Online: %d", client.UserID, len(h.GetOnlineUsers()))
 
 		case client := <-h.Unregister:
@@ -46,7 +43,6 @@ func (h *Hub) Run() {
 			if _, ok := h.Clients[client.UserID]; ok {
 				delete(h.Clients, client.UserID)
 				close(client.Send)
-				// PRINT WHEN SOMEONE LEAVES
 				log.Printf("User Left: %s | Total Online: %d", client.UserID, len(h.Clients))
 			}
 			h.mu.Unlock()

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/gofiber/contrib/websocket"
@@ -10,10 +11,8 @@ import (
 type Client struct {
 	UserID string
 	Hub    *Hub
-
-	Conn *websocket.Conn
-
-	Send chan Message
+	Conn   *websocket.Conn
+	Send   chan Message
 }
 
 func (c *Client) ReadPump() {
@@ -23,8 +22,8 @@ func (c *Client) ReadPump() {
 	}()
 
 	for {
-		// ReadMessage works exactly the same
 		_, p, err := c.Conn.ReadMessage()
+		fmt.Printf("What is p: %v", p)
 		if err != nil {
 			log.Printf("error: %v", err)
 			break
@@ -34,6 +33,8 @@ func (c *Client) ReadPump() {
 		if err := json.Unmarshal(p, &msg); err != nil {
 			continue
 		}
+		fmt.Printf("Message struct content: %v\nMessage struct recipient id: %v", msg.Content, msg.RecipientID)
+
 		msg.SenderID = c.UserID
 
 		c.Hub.Broadcast <- msg

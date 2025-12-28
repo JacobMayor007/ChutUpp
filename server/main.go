@@ -7,8 +7,7 @@ import (
 	database "websocket_server/config"
 	"websocket_server/repository"
 	"websocket_server/routes"
-
-	"github.com/gofiber/contrib/websocket" // NEW IMPORT
+	"github.com/gofiber/contrib/websocket" 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/joho/godotenv"
@@ -20,10 +19,6 @@ func main() {
 	server := fiber.New()
 	hub := NewHub()
 	go hub.Run()
-
-	// --- FIX STARTS HERE ---
-
-	// 1. WebSocket Middleware to ensure the connection is actually an upgrade request
 	server.Use("/ws", func(c *fiber.Ctx) error {
 		if websocket.IsWebSocketUpgrade(c) {
 			c.Locals("allowed", true)
@@ -32,16 +27,12 @@ func main() {
 		return fiber.ErrUpgradeRequired
 	})
 
-	// 2. The WebSocket Route (Replacing http.HandleFunc)
 	server.Get("/ws", websocket.New(func(c *websocket.Conn) {
-		// Get userId from Query Params (e.g., ?userId=123)
 		userIDStr := c.Query("userId")
 		if userIDStr == "" {
 			log.Println("No userId provided")
 			return
 		}
-
-		// Create the client using the Fiber connection 'c'
 		client := &Client{
 			UserID: userIDStr,
 			Hub:    hub,
@@ -49,17 +40,10 @@ func main() {
 			Send:   make(chan Message, 256),
 		}
 
-		// Register
 		client.Hub.Register <- client
-
-		// Start Pumps
-		// We run WritePump in a goroutine, but ReadPump in the main thread
-		// This keeps the connection open until ReadPump exits.
 		go client.WritePump()
 		client.ReadPump()
 	}))
-
-	// --- FIX ENDS HERE ---
 
 	server.Use(cors.New(cors.Config{
 		AllowOrigins: "*",

@@ -6,6 +6,7 @@ import { auth } from "../config/firebase";
 
 // The shape of the message matching your Go struct
 interface ChatMessage {
+  type: string;
   sender_id: string;
   recipient_id: string;
   content: string;
@@ -17,6 +18,8 @@ export default function Message() {
   const socketRef = useRef<WebSocket | null>(null);
   const [currentUserId, setCurrentUserId] = useState("");
   const [targetUserId, setTargetUserId] = useState("");
+  const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     // onAuthStateChanged returns an unsubscribe function
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -36,7 +39,19 @@ export default function Message() {
     // 2. Listen for incoming messages from the Hub
     ws.onmessage = (event) => {
       const incomingMsg: ChatMessage = JSON.parse(event.data);
-      setMessages((prev) => [...prev, incomingMsg]);
+      console.log("Incoming Message:", incomingMsg);
+
+      if (incomingMsg.type === "typing") {
+        setIsOtherUserTyping(true);
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(
+          () => setIsOtherUserTyping(false),
+          2000
+        );
+      } else {
+        setMessages((prev) => [...prev, incomingMsg]);
+        setIsOtherUserTyping(false);
+      }
     };
 
     ws.onclose = () => console.log("Disconnected");
@@ -51,12 +66,29 @@ export default function Message() {
     } else {
       setTargetUserId("f3zZvt8jpCfjCMSxhOs9natVxcn1");
     }
-  }, [targetUserId]);
+  }, [currentUserId]);
+
+  const handleInputChange = (val: string) => {
+    setContent(val);
+
+    // Send "typing" event to the backend
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(
+        JSON.stringify({
+          type: "typing",
+          sender_id: currentUserId,
+          recipient_id: targetUserId,
+          content: "",
+        })
+      );
+    }
+  };
 
   const handleSendMessage = () => {
     if (!content.trim() || !socketRef.current) return;
 
     const msg: ChatMessage = {
+      type: "",
       sender_id: currentUserId,
       recipient_id: targetUserId,
       content: content,
@@ -65,7 +97,6 @@ export default function Message() {
     // 3. Send message to Go ReadPump
     socketRef.current.send(JSON.stringify(msg));
 
-    // Optimistically add to your own UI
     setMessages((prev) => [...prev, msg]);
     setContent("");
   };
@@ -92,15 +123,21 @@ export default function Message() {
             <p className="text-white text-sm">{m.content}</p>
           </div>
         ))}
+        {isOtherUserTyping && (
+          <p className="text-gray-400 text-xs italic ">
+            User {targetUserId} is typing...
+          </p>
+        )}
       </div>
 
       <div className="relative">
         <MessageBox
           icon={Send}
-          onChangeValue={setContent}
+          onChangeValue={handleInputChange}
           value={content}
           widthIcon={32}
           heightIcon={32}
+          onClick={handleSendMessage}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
@@ -110,12 +147,6 @@ export default function Message() {
           }}
           className="h-12 py-2"
         />
-        <button
-          onClick={handleSendMessage}
-          className="absolute right-2 top-2 text-blue-400 hover:text-white transition-colors"
-        >
-          <Send size={24} />
-        </button>
       </div>
     </div>
   );
