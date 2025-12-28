@@ -6,7 +6,7 @@ import (
 )
 
 type Message struct {
-	Type        string `json:"type"` // "message" or "typing"
+	Type        string `json:"type"`
 	SenderID    string `json:"sender_id"`
 	RecipientID string `json:"recipient_id"`
 	Content     string `json:"content"`

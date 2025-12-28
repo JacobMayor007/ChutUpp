@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../config/firebase";
 
-// The shape of the message matching your Go struct
 interface ChatMessage {
   type: string;
   sender_id: string;
@@ -21,7 +20,6 @@ export default function Message() {
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    // onAuthStateChanged returns an unsubscribe function
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setCurrentUserId(currentUser?.uid || "");
     });
@@ -30,13 +28,11 @@ export default function Message() {
   }, []);
 
   useEffect(() => {
-    // 1. Connect to Go Backend (passing currentUserId in query params)
     const ws = new WebSocket(`ws://localhost:8080/ws?userId=${currentUserId}`);
     socketRef.current = ws;
 
     ws.onopen = () => console.log("Connected to Chat Server");
 
-    // 2. Listen for incoming messages from the Hub
     ws.onmessage = (event) => {
       const incomingMsg: ChatMessage = JSON.parse(event.data);
       console.log("Incoming Message:", incomingMsg);
@@ -56,7 +52,6 @@ export default function Message() {
 
     ws.onclose = () => console.log("Disconnected");
 
-    // Cleanup on unmount
     return () => ws.close();
   }, [currentUserId]);
 
@@ -71,7 +66,6 @@ export default function Message() {
   const handleInputChange = (val: string) => {
     setContent(val);
 
-    // Send "typing" event to the backend
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       socketRef.current.send(
         JSON.stringify({
