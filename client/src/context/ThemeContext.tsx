@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState } from "react";
 
 type ThemeContextProps = {
-  color: boolean;
-  setColor: (isDark: boolean) => void;
+  color: "light" | "dark";
+  setColor: (isDark: "light" | "dark") => void;
 };
 
 const ThemeContext = createContext<ThemeContextProps | undefined>(undefined);
@@ -10,7 +10,7 @@ const ThemeContext = createContext<ThemeContextProps | undefined>(undefined);
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [color, setColor] = useState(false);
+  const [color, setColor] = useState<"light" | "dark">("light");
 
   return (
     <ThemeContext.Provider value={{ color, setColor }}>

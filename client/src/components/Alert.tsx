@@ -17,7 +17,6 @@ export default function Alert({ message, type }: AlertProps) {
           ? "bg-gradient-to-r from-red-500 to-red-600 text-white border-red-500"
           : "bg-gradient-to-r from-[#F9A825] to-[#FFC107] text-white border-[#F9A825]"
       }`}
-      style={{ animation: "slideInRight 0.3s ease-out" }}
     >
       {type === "success" && <CheckCircle className="w-6 h-6" />}
       {type === "error" && <AlertTriangle className="w-6 h-6" />}
