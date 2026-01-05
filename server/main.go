@@ -7,7 +7,8 @@ import (
 	database "websocket_server/config"
 	"websocket_server/repository"
 	"websocket_server/routes"
-	"github.com/gofiber/contrib/websocket" 
+
+	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/joho/godotenv"
@@ -17,8 +18,8 @@ func main() {
 	fmt.Printf("Main Server")
 
 	server := fiber.New()
-	hub := NewHub()
-	go hub.Run()
+	st := NewStation()
+	go st.Run()
 	server.Use("/ws", func(c *fiber.Ctx) error {
 		if websocket.IsWebSocketUpgrade(c) {
 			c.Locals("allowed", true)
@@ -33,16 +34,16 @@ func main() {
 			log.Println("No userId provided")
 			return
 		}
-		client := &Client{
-			UserID: userIDStr,
-			Hub:    hub,
-			Conn:   c,
-			Send:   make(chan Message, 256),
+		user := &User{
+			UserId:  userIDStr,
+			Station: st,
+			Conn:    c,
+			Send:    make(chan Content, 256),
 		}
 
-		client.Hub.Register <- client
-		go client.WritePump()
-		client.ReadPump()
+		user.Station.Register <- user
+		go user.WriteInjection()
+		user.ReadInjection()
 	}))
 
 	server.Use(cors.New(cors.Config{
@@ -75,7 +76,7 @@ func main() {
 	userRepository := repository.InitUserRepository(db)
 	routes.SetupRoutes(server, userRepository)
 
-	fmt.Println(hub.GetOnlineUsers())
+	fmt.Println(st.GetOnlineUsers())
 
 	log.Fatal(server.Listen(":8080"))
 }

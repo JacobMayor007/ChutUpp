@@ -2,27 +2,17 @@ import { LogOut } from "lucide-react";
 import ChatBar from "../components/ChatBar";
 import Message from "../components/Message";
 import { useLogout } from "../hooks/authHooks";
-import { onAuthStateChanged } from "firebase/auth";
-import { useEffect, useState } from "react";
-import { auth } from "../config/firebase";
+import { useAuth } from "../context/AuthContext";
 
 export default function Chat() {
   const { logout } = useLogout();
-  const [currentUserId, setCurrentUserId] = useState("");
+  const { user } = useAuth();
 
-  useEffect(() => {
-    // onAuthStateChanged returns an unsubscribe function
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setCurrentUserId(currentUser?.uid || "");
-    });
-
-    return () => unsubscribe();
-  }, []);
   return (
     <div className="h-screen flex flex-col bg-black px-10 py-6 ">
       <div className="flex flex-row justify-end items-center gap-4 mb-4">
         <h1 className="text-white text-right font-sans font-black">
-          Hello, {currentUserId}!
+          Hello, {user?.email}!
         </h1>
         <div
           onClick={logout}
@@ -34,11 +24,11 @@ export default function Chat() {
           </h1>
         </div>
       </div>
-      <div className="h-full grid grid-cols-12 gap-4">
+      <div className="h-full grid grid-cols-12 gap-4 overflow-hidden">
         <div className="col-span-3">
           <ChatBar />
         </div>
-        <div className="col-span-9">
+        <div className="col-span-9 h-full overflow-hidden">
           <Message />
         </div>
       </div>
