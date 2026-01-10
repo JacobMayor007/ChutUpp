@@ -14,6 +14,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
+var UserRepository *repository.UserDB
+
 func main() {
 	fmt.Printf("Main Server")
 
@@ -47,9 +49,10 @@ func main() {
 	}
 
 	userRepository := repository.InitUserRepository(db)
+	chatRepository := repository.InitChatRepository(db)
 	routes.SetupRoutes(server, userRepository)
 
-	st := NewStation()
+	st := NewStation(chatRepository)
 	go st.Run()
 	server.Use("/ws", func(c *fiber.Ctx) error {
 		if websocket.IsWebSocketUpgrade(c) {
