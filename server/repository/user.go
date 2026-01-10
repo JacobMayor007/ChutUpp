@@ -34,7 +34,7 @@ func (userDb *UserDB) IsIdExist(id string) error {
 	var exists bool
 
 	query := `
-		SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)
+		SELECT EXISTS(SELECT 1 FROM users WHERE user_id = $1)
 	`
 
 	err := userDb.sqlDB.Db.QueryRow(query, id).Scan(&exists)

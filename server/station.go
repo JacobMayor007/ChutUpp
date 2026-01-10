@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"sync"
+	"websocket_server/repository"
 )
 
 type Content struct {
@@ -18,14 +19,16 @@ type Station struct {
 	Broadcast  chan Content
 	Register   chan *User
 	UnRegister chan *User
+	Repo       repository.ChatRepository
 }
 
-func NewStation() *Station {
+func NewStation(repo repository.ChatRepository) *Station {
 	return &Station{
 		Broadcast:  make(chan Content),
 		Register:   make(chan *User),
 		UnRegister: make(chan *User),
 		Users:      make(map[string]*User),
+		Repo:       repo,
 	}
 }
 
@@ -39,7 +42,7 @@ func (s *Station) Run() {
 			log.Printf("User Joined: %s | Total Online: %d", user.UserId, len(s.GetOnlineUsers()))
 
 		case user := <-s.UnRegister:
-			
+
 			s.mx.Lock()
 			if _, ok := s.Users[user.UserId]; ok {
 				delete(s.Users, user.UserId)
@@ -56,6 +59,7 @@ func (s *Station) Run() {
 			if ok {
 				select {
 				case reciever.Send <- msg:
+
 					log.Printf("Message routed from %s to %s", msg.ClientID, msg.ReceiverID)
 				default:
 					close(reciever.Send)
