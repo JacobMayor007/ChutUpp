@@ -18,33 +18,6 @@ func main() {
 	fmt.Printf("Main Server")
 
 	server := fiber.New()
-	st := NewStation()
-	go st.Run()
-	server.Use("/ws", func(c *fiber.Ctx) error {
-		if websocket.IsWebSocketUpgrade(c) {
-			c.Locals("allowed", true)
-			return c.Next()
-		}
-		return fiber.ErrUpgradeRequired
-	})
-
-	server.Get("/ws", websocket.New(func(c *websocket.Conn) {
-		userIDStr := c.Query("userId")
-		if userIDStr == "" {
-			log.Println("No userId provided")
-			return
-		}
-		user := &User{
-			UserId:  userIDStr,
-			Station: st,
-			Conn:    c,
-			Send:    make(chan Content, 256),
-		}
-
-		user.Station.Register <- user
-		go user.WriteInjection()
-		user.ReadInjection()
-	}))
 
 	server.Use(cors.New(cors.Config{
 		AllowOrigins: "*",
@@ -75,6 +48,42 @@ func main() {
 
 	userRepository := repository.InitUserRepository(db)
 	routes.SetupRoutes(server, userRepository)
+
+	st := NewStation()
+	go st.Run()
+	server.Use("/ws", func(c *fiber.Ctx) error {
+		if websocket.IsWebSocketUpgrade(c) {
+			c.Locals("allowed", true)
+			return c.Next()
+		}
+		return fiber.ErrUpgradeRequired
+	})
+
+	server.Get("/ws", websocket.New(func(c *websocket.Conn) {
+		userIDStr := c.Query("userId")
+		if userIDStr == "" {
+			log.Println("No userId provided")
+			return
+		}
+
+		if err := userRepository.IsIdExist(userIDStr); err != nil {
+			log.Println("error on id")
+			return
+		}
+
+		log.Println("Id successful")
+
+		user := &User{
+			UserId:  userIDStr,
+			Station: st,
+			Conn:    c,
+			Send:    make(chan Content, 256),
+		}
+
+		user.Station.Register <- user
+		go user.WriteInjection()
+		user.ReadInjection()
+	}))
 
 	fmt.Println(st.GetOnlineUsers())
 
