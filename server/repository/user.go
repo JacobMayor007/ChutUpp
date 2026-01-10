@@ -7,6 +7,7 @@ import (
 
 type UserRepository interface {
 	CreateUserAccount(*model.User) error
+	IsIdExist(id string) error
 }
 
 type UserDB struct {
@@ -27,4 +28,20 @@ func (userDb *UserDB) CreateUserAccount(user *model.User) error {
 
 	_, err := userDb.sqlDB.Db.Exec(query, user.UserUID, user.Email)
 	return err
+}
+
+func (userDb *UserDB) IsIdExist(id string) error {
+	var exists bool
+
+	query := `
+		SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)
+	`
+
+	err := userDb.sqlDB.Db.QueryRow(query, id).Scan(&exists)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
