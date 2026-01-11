@@ -25,7 +25,6 @@ func (userDb *UserDB) CreateUserAccount(user *model.User) error {
         INSERT INTO users (user_id, email)
         VALUES ($1, $2)
     `
-
 	_, err := userDb.sqlDB.Db.Exec(query, user.UserUID, user.Email)
 	return err
 }

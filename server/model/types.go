@@ -14,6 +14,6 @@ type Messages struct {
 
 type Chats struct {
 	RoomID      string    `json:"chat_id"`
-	LastMessage string    `json:"lastMessage"`
-	UserIds     [2]string `json:"user_id"`
+	LastMessage string    `json:"last_message"`
+	UserIds     [2]string `json:"participants"`
 }
