@@ -30,8 +30,20 @@ func NewPostgreDB() (*PostgreDB, error) {
 }
 
 func (pb *PostgreDB) Init() error {
+	_, err := pb.Db.Exec(`
+		create extension if not exists "uuid-ossp"
+	`)
 
-	pb.createUserTable()
+	if err != nil {
+		return err
+	}
+
+	if err := pb.createUserTable(); err != nil {
+		return err
+	}
+	if err := pb.createChatTables(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -49,31 +61,6 @@ func (pb *PostgreDB) createUserTable() error {
 		return err
 	}
 
-	funcTrig := `
-		create or replace function setCreatedAt()
-		returns trigger as $$
-		begin
-			new.created_at = NOW();
-			return new;
-		end;
-		$$ language plpgsql;
-
-		create or replace function set_timestamp()
-		returns trigger AS $$
-		begin
-			new.updated_at = NOW();
-			return new;
-		end;
-		$$ language plpgsql;
-	`
-
-	_, err = pb.Db.Exec(funcTrig)
-	if err != nil {
-		fmt.Printf("error in creating function trigger table: %s", err)
-
-		return err
-	}
-
 	trigger := `drop trigger if exists update_user_timestamp on users;
         create trigger update_user_timestamp
         before update on users
@@ -83,60 +70,57 @@ func (pb *PostgreDB) createUserTable() error {
 	_, err = pb.Db.Exec(trigger)
 
 	if err != nil {
-		fmt.Printf("error in trigger: %v", err)
+		fmt.Printf("error in trigger user table: %v", err)
 	}
 	return err
 }
 
-func (pb *PostgreDB) createChatTable() error {
-	query := `create table if not exists chats (
-		chat_id text primary key,
-		lastMessage text,
-		created_at timestamp default now(),
-        updated_at timestamp default now()
+func (pb *PostgreDB) createChatTables() error {
+	stChats := `CREATE TABLE IF NOT EXISTS chats (
+        chat_id uuid primary key default uuid_generate_v4(),
+        last_message text,
+        created_at timestamp DEFAULT NOW(),
+        updated_at timestamp DEFAULT NOW()
+    )`
+
+	if _, err := pb.Db.Exec(stChats); err != nil {
+		fmt.Printf("error in creating chats table: %s", err)
+		return err
+	}
+
+	stChatParticipants := `
+		CREATE TABLE IF NOT EXISTS chat_participants (
+       	chat_id uuid references chats(chat_id) ON DELETE CASCADE,
+		user_id text references users(user_id) ON DELETE CASCADE,
+		created_at timestamp DEFAULT NOW(),
+        updated_at timestamp DEFAULT NOW(),
+		PRIMARY KEY (chat_id, user_id)
 	)`
 
-	_, err := pb.Db.Exec(query)
-	if err != nil {
-		fmt.Printf("error in creating table: %s", err)
+	if _, err := pb.Db.Exec(stChatParticipants); err != nil {
+		fmt.Printf("error in creating chat participants table: %s", err)
 		return err
 	}
 
-	funcTrig := `
-		create or replace function setCreatedAt()
-		returns trigger as $$
-		begin
-			new.created_at = NOW();
-			return new;
-		end;
-		$$ language plpgsql;
-
-		create or replace function set_timestamp()
-		returns trigger AS $$
-		begin
-			new.updated_at = NOW();
-			return new;
-		end;
-		$$ language plpgsql;
-	`
-
-	_, err = pb.Db.Exec(funcTrig)
-	if err != nil {
-		fmt.Printf("error in creating function trigger table: %s", err)
-
+	trigger := `
+        DROP TRIGGER IF EXISTS update_chat_timestamp ON chats;
+        CREATE TRIGGER update_chat_timestamp
+        BEFORE UPDATE ON chats
+        FOR EACH ROW
+        EXECUTE FUNCTION set_timestamp();
+    `
+	if _, err := pb.Db.Exec(trigger); err != nil {
+		fmt.Printf("error in creating chats trigger: %s", err)
 		return err
 	}
 
-	trigger := `drop trigger if exists update_user_timestamp on users;
-        create trigger update_user_timestamp
-        before update on users
-        for each row
-        execute function set_timestamp();
-		`
-	_, err = pb.Db.Exec(trigger)
-
-	if err != nil {
-		fmt.Printf("error in trigger: %v", err)
-	}
+	triggerParticipants := `
+        DROP TRIGGER IF EXISTS update_participants_timestamp ON chat_participants;
+        CREATE TRIGGER update_participants_timestamp
+        BEFORE UPDATE ON chat_participants
+        FOR EACH ROW
+        EXECUTE FUNCTION set_timestamp();
+    `
+	_, err := pb.Db.Exec(triggerParticipants)
 	return err
 }
