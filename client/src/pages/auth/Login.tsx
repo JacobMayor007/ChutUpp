@@ -2,7 +2,7 @@ import { LoaderIcon, Mail, MessageCircle } from "lucide-react";
 import InputBox from "../../components/InputBox";
 import { useState } from "react";
 import Button from "../../components/Button";
-import { useLogin } from "../../hooks/authHooks";
+import { useLogin } from "../../hooks/auth/authHooks";
 import { useNavigate } from "react-router-dom";
 import Alert from "../../components/Alert";
 

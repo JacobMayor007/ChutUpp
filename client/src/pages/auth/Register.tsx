@@ -4,7 +4,7 @@ import { useState } from "react";
 import Button from "../../components/Button";
 import { useNavigate } from "react-router-dom";
 import Alert from "../../components/Alert";
-import { useRegister } from "../../hooks/authHooks";
+import { useRegister } from "../../hooks/auth/authHooks";
 
 export default function Register() {
   const [email, setEmail] = useState("");

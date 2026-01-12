@@ -1,7 +1,7 @@
 import { LogOut, Moon, Sun } from "lucide-react";
 import ChatBar from "../components/ChatBar";
 import Message from "../components/Message";
-import { useLogout } from "../hooks/authHooks";
+import { useLogout } from "../hooks/auth/authHooks";
 import { useTheme } from "../context/ThemeContext";
 import DivBox from "../components/DivBox";
 import MyText from "../components/MyText";
@@ -23,7 +23,6 @@ export default function Chat() {
           font="sans"
           className="font-bold"
         />
-<<<<<<< HEAD
         <DivBox
           onClick={logout}
           className="flex flex-row items-center gap-4 active:95 cursor-pointer bg-red-500 px-4 py-1.5 rounded-lg"
@@ -36,20 +35,6 @@ export default function Chat() {
             className="text-right font-sans font-black text-white"
           />
         </DivBox>
-=======
-        <div
-          onClick={logout}
-          className="flex flex-row items-center gap-4 active:95 cursor-pointer"
-        >
-          <LogOut color="red" />
-          <MyText
-            font="sans"
-            size="xl"
-            label="Sign out"
-            className="text-right font-sans font-black text-red-500"
-          />
-        </div>
->>>>>>> 36d353e870a3a92512049044059065c65fef7165
         {color === "light" ? (
           <Moon
             color={"black"}
