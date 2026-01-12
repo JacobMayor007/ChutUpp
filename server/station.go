@@ -56,9 +56,15 @@ func (s *Station) Run() {
 		case msg := <-s.Broadcast:
 			msg.CreatedAt = time.Now()
 
-			if _, err := s.Repo.SetChats(msg.ClientID, msg.ReceiverID, msg.Message); err != nil {
-				log.Printf("error in message station %s", err)
-				continue
+			log.Printf("Type: %s", msg.Type)
+			log.Printf("Sender Id: %s", msg.ClientID)
+			log.Printf("Reciever Id: %s", msg.ReceiverID)
+
+			if msg.Type == "message" {
+				if _, err := s.Repo.SetChats(msg.ClientID, msg.ReceiverID, msg.Message); err != nil {
+					log.Printf("Error in message station %s", err)
+					continue
+				}
 			}
 
 			s.mx.RLock()
@@ -83,15 +89,4 @@ func (s *Station) Run() {
 
 		}
 	}
-}
-
-func (st *Station) GetOnlineUsers() []string {
-	st.mx.RLock()
-	defer st.mx.RUnlock()
-
-	var users []string
-	for userID := range st.Users {
-		users = append(users, userID)
-	}
-	return users
 }

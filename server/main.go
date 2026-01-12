@@ -88,7 +88,5 @@ func main() {
 		user.ReadInjection()
 	}))
 
-	fmt.Println(st.GetOnlineUsers())
-
 	log.Fatal(server.Listen(":8080"))
 }

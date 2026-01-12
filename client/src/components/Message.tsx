@@ -6,8 +6,8 @@ import { useAuth } from "../context/AuthContext";
 
 interface ChatMessage {
   type: string;
-  sender_id: string;
-  recipient_id: string;
+  user_id: string;
+  receiver_id: string;
   content: string;
 }
 
@@ -82,9 +82,9 @@ export default function Message() {
     if (!content.trim() || !socketRef.current) return;
 
     const msg: ChatMessage = {
-      type: "",
-      sender_id: user?.uid || "",
-      recipient_id: targetUserId,
+      type: "message",
+      user_id: user?.uid || "",
+      receiver_id: targetUserId,
       content: content,
     };
 
@@ -104,7 +104,7 @@ export default function Message() {
           <div
             key={i}
             className={`p-2 rounded-lg max-w-[80%] ${
-              m.sender_id === user?.uid
+              m.user_id === user?.uid
                 ? "bg-blue-600 self-end ml-auto"
                 : "bg-gray-700 self-start text-white"
             }`}

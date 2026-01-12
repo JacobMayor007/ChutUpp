@@ -23,18 +23,18 @@ export default function Chat() {
           font="sans"
           className="font-bold"
         />
-        <div
+        <DivBox
           onClick={logout}
-          className="flex flex-row items-center gap-4 active:95 cursor-pointer"
+          className="flex flex-row items-center gap-4 active:95 cursor-pointer bg-red-500 px-4 py-1.5 rounded-lg"
         >
-          <LogOut color="red" />
+          <LogOut color="white" />
           <MyText
             font="sans"
-            size="xl"
+            size="lg"
             label="Sign out"
-            className="text-right font-sans font-black text-red-500"
+            className="text-right font-sans font-black text-white"
           />
-        </div>
+        </DivBox>
         {color === "light" ? (
           <Moon
             color={"black"}

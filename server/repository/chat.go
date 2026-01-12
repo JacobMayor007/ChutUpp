@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"log"
 	database "websocket_server/config"
 )
 
@@ -26,6 +27,8 @@ func (r *ChatDB) SetChats(senderID, receiverID, message string) (string, error) 
 	defer tx.Rollback()
 
 	var chatID string
+
+	log.Printf("Sender Id: %s\nReceiver Id: %s\n Message: %s", senderID, receiverID, message)
 
 	findQuery := `
         SELECT chat_id FROM chat_participants 
@@ -53,6 +56,8 @@ func (r *ChatDB) SetChats(senderID, receiverID, message string) (string, error) 
 
 		// Add both participants
 		insertPart := `INSERT INTO chat_participants (chat_id, user_id) VALUES ($1, $2), ($1, $3)`
+		log.Printf("Chat id: %s", chatID)
+
 		if _, err := tx.Exec(insertPart, chatID, senderID, receiverID); err != nil {
 			return "", err
 		}
