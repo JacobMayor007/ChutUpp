@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { authService } from "../service/authService";
+import { authService } from "../../service/authService";
 
 export const useRegister = () => {
   const [loading, setLoading] = useState(false);
