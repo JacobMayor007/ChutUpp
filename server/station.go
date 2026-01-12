@@ -3,14 +3,16 @@ package main
 import (
 	"log"
 	"sync"
+	"time"
 	"websocket_server/repository"
 )
 
 type Content struct {
-	Type       string `json:"type"`
-	Message    string `json:"content"`
-	ClientID   string `json:"user_id"`
-	ReceiverID string `json:"receiver_id"`
+	Type       string    `json:"type"`
+	Message    string    `json:"content"`
+	ClientID   string    `json:"user_id"`
+	ReceiverID string    `json:"receiver_id"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 type Station struct {
@@ -47,19 +49,27 @@ func (s *Station) Run() {
 			if _, ok := s.Users[user.UserId]; ok {
 				delete(s.Users, user.UserId)
 				close(user.Send)
-				log.Printf("User Left: %s | Total Online: %d", user.UserId, len(s.Users))
+				log.Printf("User Left: %s", user.UserId)
 			}
 			s.mx.Unlock()
 
 		case msg := <-s.Broadcast:
+			msg.CreatedAt = time.Now()
+
+			if _, err := s.Repo.SetChats(msg.ClientID, msg.ReceiverID, msg.Message); err != nil {
+				log.Printf("error in message station %s", err)
+				continue
+			}
+
 			s.mx.RLock()
 			reciever, ok := s.Users[msg.ReceiverID]
 			s.mx.RUnlock()
 
 			if ok {
-				select {
-				case reciever.Send <- msg:
 
+				select {
+
+				case reciever.Send <- msg:
 					log.Printf("Message routed from %s to %s", msg.ClientID, msg.ReceiverID)
 				default:
 					close(reciever.Send)
