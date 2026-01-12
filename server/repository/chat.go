@@ -28,8 +28,11 @@ func (r *ChatDB) SetChats(senderID, receiverID, message string) (string, error) 
 
 	var chatID string
 
+<<<<<<< HEAD
 	log.Printf("Sender Id: %s\nReceiver Id: %s\n Message: %s", senderID, receiverID, message)
 
+=======
+>>>>>>> 36d353e870a3a92512049044059065c65fef7165
 	findQuery := `
         SELECT chat_id FROM chat_participants 
 		WHERE chat_id IN (
@@ -56,8 +59,11 @@ func (r *ChatDB) SetChats(senderID, receiverID, message string) (string, error) 
 
 		// Add both participants
 		insertPart := `INSERT INTO chat_participants (chat_id, user_id) VALUES ($1, $2), ($1, $3)`
+<<<<<<< HEAD
 		log.Printf("Chat id: %s", chatID)
 
+=======
+>>>>>>> 36d353e870a3a92512049044059065c65fef7165
 		if _, err := tx.Exec(insertPart, chatID, senderID, receiverID); err != nil {
 			return "", err
 		}

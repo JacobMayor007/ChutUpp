@@ -87,6 +87,11 @@ func main() {
 		go user.WriteInjection()
 		user.ReadInjection()
 	}))
+<<<<<<< HEAD
+=======
+
+	fmt.Println(st.GetOnlineUsers())
+>>>>>>> 36d353e870a3a92512049044059065c65fef7165
 
 	log.Fatal(server.Listen(":8080"))
 }
