@@ -6,7 +6,15 @@ class ApiService {
   }
 
   async getChat(userId: string | null | undefined) {
-    const res = await fetch(`${this.basePath}/chat/${userId}`);
+    const res = await fetch(`${this.basePath}/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ user_id: userId }),
+    });
+
     if (!res.ok) throw new Error("Failed to fetch chat");
     return res.json();
   }

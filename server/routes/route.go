@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func SetupRoutes(app *fiber.App, user repository.UserRepository) {
+func SetupRoutes(app *fiber.App, user repository.UserRepository, chat repository.ChatRepository) {
 	UserRoutes(app, user)
+	ChatRoutes(app, chat)
 }

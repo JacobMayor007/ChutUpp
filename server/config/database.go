@@ -79,6 +79,7 @@ func (pb *PostgreDB) createChatTables() error {
 	stChats := `CREATE TABLE IF NOT EXISTS chats (
         chat_id uuid primary key default uuid_generate_v4(),
         last_message text,
+		user_id text references users(user_id),
         created_at timestamp DEFAULT NOW(),
         updated_at timestamp DEFAULT NOW()
     )`

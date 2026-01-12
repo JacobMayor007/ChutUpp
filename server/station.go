@@ -56,7 +56,6 @@ func (s *Station) Run() {
 		case msg := <-s.Broadcast:
 			msg.CreatedAt = time.Now()
 
-<<<<<<< HEAD
 			log.Printf("Type: %s", msg.Type)
 			log.Printf("Sender Id: %s", msg.ClientID)
 			log.Printf("Reciever Id: %s", msg.ReceiverID)
@@ -66,11 +65,6 @@ func (s *Station) Run() {
 					log.Printf("Error in message station %s", err)
 					continue
 				}
-=======
-			if _, err := s.Repo.SetChats(msg.ClientID, msg.ReceiverID, msg.Message); err != nil {
-				log.Printf("error in message station %s", err)
-				continue
->>>>>>> 36d353e870a3a92512049044059065c65fef7165
 			}
 
 			s.mx.RLock()

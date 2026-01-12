@@ -31,6 +31,9 @@ export default function ChatBar() {
       </DivBox>
     );
 
+  console.log(user?.uid);
+  console.log("Chats: ", chat);
+
   return (
     <DivBox className=" h-full p-4 rounded-xl">
       <DivBox className="bg-transparent flex flex-row items-center justify-between">
@@ -45,7 +48,6 @@ export default function ChatBar() {
           onClick={() => setModal("search")}
           className="active:scale-80 hover:cursor-pointer"
         />
-        {chat?.chat_id}
       </DivBox>
     </DivBox>
   );
