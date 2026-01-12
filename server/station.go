@@ -41,7 +41,7 @@ func (s *Station) Run() {
 			s.mx.Lock()
 			s.Users[user.UserId] = user
 			s.mx.Unlock()
-			log.Printf("User Joined: %s | Total Online: %d", user.UserId, len(s.GetOnlineUsers()))
+			log.Printf("User Joined: %s", user.UserId)
 
 		case user := <-s.UnRegister:
 
