@@ -21,6 +21,7 @@ func main() {
 
 	server := fiber.New()
 
+	//Configuring the CORS policy of the backend
 	server.Use(cors.New(cors.Config{
 		AllowOrigins: "*",
 		AllowHeaders: "Accept, Content-Type, Origins",
