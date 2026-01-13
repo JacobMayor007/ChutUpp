@@ -1,6 +1,6 @@
-type Chat = {
+export type Chat = {
   chat_id: string;
   last_message: string;
-  receiver_id: string;
-  user_id: string;
+  last_sender_email: string;
+  last_sender_id: string;
 };
