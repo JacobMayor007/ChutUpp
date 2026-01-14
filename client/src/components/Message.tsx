@@ -1,24 +1,30 @@
 import { Send } from "lucide-react";
 import MessageBox from "./InputMessage";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
+import type { ChatMessage } from "../types";
+import type { User } from "firebase/auth";
 
-import { useAuth } from "../context/AuthContext";
+type MessageProps = {
+  user: User | null;
+  content: string; // Changed from optional to required for easier handling
+  setContent: (content: string) => void;
+  messages: ChatMessage[]; // Changed from optional to required
+  setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>; // 2. Correct State Setter Type
+  socketRef: React.RefObject<WebSocket | null>;
+  targetUserId: string;
+  isOtherUserTyping: boolean;
+};
 
-interface ChatMessage {
-  type: string;
-  user_id: string;
-  receiver_id: string;
-  content: string;
-}
-
-export default function Message() {
-  const [content, setContent] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const socketRef = useRef<WebSocket | null>(null);
-  const { user } = useAuth();
-  const [targetUserId, setTargetUserId] = useState("");
-  const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
-  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+export default function Message({
+  content,
+  setContent,
+  messages,
+  socketRef,
+  targetUserId,
+  setMessages,
+  isOtherUserTyping,
+  user,
+}: MessageProps) {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -27,46 +33,13 @@ export default function Message() {
     }
   }, [messages]);
 
-  useEffect(() => {
-    const ws = new WebSocket(`ws://localhost:8080/ws?userId=${user?.uid}`);
-    socketRef.current = ws;
-
-    ws.onopen = () => console.log("Connected to Chat Server");
-
-    ws.onmessage = (event) => {
-      const incomingMsg: ChatMessage = JSON.parse(event.data);
-      console.log("Incoming Message:", incomingMsg);
-
-      if (incomingMsg.type === "typing") {
-        setIsOtherUserTyping(true);
-        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = setTimeout(
-          () => setIsOtherUserTyping(false),
-          2000
-        );
-      } else {
-        setMessages((prev) => [...prev, incomingMsg]);
-        setIsOtherUserTyping(false);
-      }
-    };
-
-    ws.onclose = () => console.log("Disconnected");
-
-    return () => ws.close();
-  }, [user?.uid]);
-
-  useEffect(() => {
-    if (user?.uid === "f3zZvt8jpCfjCMSxhOs9natVxcn1") {
-      setTargetUserId("sFT3hHbbd5OY3Xn7gtN484oIjs22");
-    } else {
-      setTargetUserId("f3zZvt8jpCfjCMSxhOs9natVxcn1");
-    }
-  }, [user?.uid]);
-
   const handleInputChange = (val: string) => {
     setContent(val);
 
-    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+    if (
+      socketRef?.current &&
+      socketRef?.current.readyState === WebSocket.OPEN
+    ) {
       socketRef.current.send(
         JSON.stringify({
           type: "typing",
@@ -79,7 +52,7 @@ export default function Message() {
   };
 
   const handleSendMessage = () => {
-    if (!content.trim() || !socketRef.current) return;
+    if (!content?.trim() || !socketRef?.current) return;
 
     const msg: ChatMessage = {
       type: "message",
