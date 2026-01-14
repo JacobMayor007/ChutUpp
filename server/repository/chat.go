@@ -2,6 +2,7 @@ package repository
 
 import (
 	"log"
+	"time"
 	database "websocket_server/config"
 )
 
@@ -21,12 +22,14 @@ func InitChatRepository(db *database.PostgreDB) *ChatDB {
 }
 
 type ChatSummary struct {
-	ChatID          string `json:"chat_id"`
-	LastMessage     string `json:"last_message"`
-	LastSenderEmail string `json:"last_sender_email"`
-	LastSenderId    string `json:"last_sender_id"`
-	CreatedAt       string `json:"created_at"`
-	UpdatedAt       string `json:"updated_at"`
+	ChatID          string    `json:"chat_id"`
+	LastMessage     string    `json:"last_message"`
+	LastSenderEmail string    `json:"last_sender_email"`
+	LastSenderId    string    `json:"last_sender_id"`
+	RecipientEmail  string    `json:"other_user_id"`    // Match your JSON output
+	RecipientId     string    `json:"other_user_email"` // Match your JSON output
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 func (cd *ChatDB) SetChats(senderID, receiverID, message string) (string, error) {
@@ -79,19 +82,25 @@ func (cd *ChatDB) SetChats(senderID, receiverID, message string) (string, error)
 
 func (cd *ChatDB) GetChats(userId string) ([]ChatSummary, error) {
 	query := `
-    SELECT 
-        c.chat_id, 
-        c.last_message, 
-        u.email AS last_sender_email,
-		c.user_id as last_sender_id,
-		c.created_at,
-        c.updated_at
-    FROM chats c
-    JOIN chat_participants cp ON c.chat_id = cp.chat_id
-    LEFT JOIN users u ON c.user_id = u.user_id
-    WHERE cp.user_id = $1
-    ORDER BY c.updated_at DESC
-`
+		SELECT 
+			c.chat_id, 
+			c.last_message, 
+			u_sender.email AS last_sender_email,
+			u_sender.user_id AS last_sender_id,
+			u_recipient.email AS recipient_email,
+			u_recipient.user_id AS recipient_id,
+			c.created_at,
+			c.updated_at
+		FROM chats c
+		-- Find MY membership
+		JOIN chat_participants cp_me ON c.chat_id = cp_me.chat_id AND cp_me.user_id = $1
+		-- Find the OTHER membership (The one that is NOT me)
+		JOIN chat_participants cp_other ON c.chat_id = cp_other.chat_id AND cp_other.user_id != $1
+		-- Get sender and recipient info
+		LEFT JOIN users u_sender ON c.user_id = u_sender.user_id
+		LEFT JOIN users u_recipient ON cp_other.user_id = u_recipient.user_id
+		ORDER BY c.updated_at DESC;
+	`
 
 	rows, err := cd.sqlDB.Db.Query(query, userId)
 	if err != nil {
@@ -102,7 +111,10 @@ func (cd *ChatDB) GetChats(userId string) ([]ChatSummary, error) {
 	var chats []ChatSummary
 	for rows.Next() {
 		var s ChatSummary
-		if err := rows.Scan(&s.ChatID, &s.LastMessage, &s.LastSenderEmail, &s.LastSenderId, &s.CreatedAt, &s.UpdatedAt); err != nil {
+		if err := rows.Scan(&s.ChatID, &s.LastMessage,
+			&s.LastSenderEmail, &s.LastSenderId,
+			&s.RecipientEmail, &s.RecipientId,
+			&s.CreatedAt, &s.UpdatedAt); err != nil {
 			return nil, err
 		}
 		chats = append(chats, s)

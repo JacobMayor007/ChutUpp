@@ -6,13 +6,55 @@ import { useTheme } from "../context/ThemeContext";
 import DivBox from "../components/DivBox";
 import MyText from "../components/MyText";
 import { useAuth } from "../context/AuthContext";
+import { useEffect, useRef, useState } from "react";
+import type { ChatMessage } from "../types";
 
 export default function Chat() {
   const { logout } = useLogout();
   const { user } = useAuth();
   const { color, setColor } = useTheme();
+  const [content, setContent] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const socketRef = useRef<WebSocket | null>(null);
+  const [targetUserId, setTargetUserId] = useState("");
+  const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  console.log(color);
+  useEffect(() => {
+    const ws = new WebSocket(`ws://localhost:8080/ws?userId=${user?.uid}`);
+    socketRef.current = ws;
+
+    ws.onopen = () => console.log("Connected to Chat Server");
+
+    ws.onmessage = (event) => {
+      const incomingMsg: ChatMessage = JSON.parse(event.data);
+      console.log("Incoming Message:", incomingMsg);
+
+      if (incomingMsg.type === "typing") {
+        setIsOtherUserTyping(true);
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(
+          () => setIsOtherUserTyping(false),
+          2000
+        );
+      } else {
+        setMessages((prev) => [...prev, incomingMsg]);
+        setIsOtherUserTyping(false);
+      }
+    };
+
+    ws.onclose = () => console.log("Disconnected");
+
+    return () => ws.close();
+  }, [user?.uid]);
+
+  useEffect(() => {
+    if (user?.uid === "f3zZvt8jpCfjCMSxhOs9natVxcn1") {
+      setTargetUserId("sFT3hHbbd5OY3Xn7gtN484oIjs22");
+    } else {
+      setTargetUserId("f3zZvt8jpCfjCMSxhOs9natVxcn1");
+    }
+  }, [user?.uid]);
 
   return (
     <DivBox className="h-screen flex flex-col  px-10 py-6 ">
@@ -58,7 +100,16 @@ export default function Chat() {
           <ChatBar />
         </div>
         <div className="col-span-9 h-full overflow-hidden">
-          <Message />
+          <Message
+            user={user}
+            content={content}
+            setContent={setContent}
+            isOtherUserTyping={isOtherUserTyping}
+            messages={messages}
+            setMessages={setMessages}
+            socketRef={socketRef}
+            targetUserId={targetUserId}
+          />
         </div>
       </div>
     </DivBox>
