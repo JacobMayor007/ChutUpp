@@ -31,6 +31,8 @@ export default function Chat() {
       console.log("Incoming Message:", incomingMsg);
 
       if (incomingMsg.type === "typing") {
+        console.log(incomingMsg.content);
+
         setIsOtherUserTyping(true);
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = setTimeout(
@@ -55,6 +57,8 @@ export default function Chat() {
       setTargetUserId("f3zZvt8jpCfjCMSxhOs9natVxcn1");
     }
   }, [user?.uid]);
+
+  console.log("Other user typing?: ", isOtherUserTyping);
 
   return (
     <DivBox className="h-screen flex flex-col  px-10 py-6 ">

@@ -44,7 +44,7 @@ export default function Message({
         JSON.stringify({
           type: "typing",
           sender_id: user?.uid,
-          recipient_id: targetUserId,
+          receiver_id: targetUserId,
           content: "",
         })
       );
