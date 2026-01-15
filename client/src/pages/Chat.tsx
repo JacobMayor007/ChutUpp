@@ -22,15 +22,31 @@ export default function Chat() {
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const ws = new WebSocket(`ws://localhost:8080/ws?userId=${user?.uid}`);
+    if (!user?.uid) return;
+
+    // 1. Logic Flag: Prevents processing messages if component is dead
+    let isUnmounted = false;
+
+    console.log("🚀 Attempting connection...");
+    const ws = new WebSocket(`ws://localhost:8080/ws?userId=${user.uid}`);
     socketRef.current = ws;
 
+    ws.onopen = () => {
+      // If React unmounted this during the handshake, close it now.
+      if (isUnmounted) {
+        ws.close();
+        return;
+      }
+      console.log("✅ Connected to Chat Server");
+      ws.send(JSON.stringify({ type: "chat", user_id: user.uid, content: "" }));
+    };
+
     ws.onmessage = (event) => {
+      if (isUnmounted) return; // Don't update state on a dead component
+
       const incomingMsg: ChatMessage = JSON.parse(event.data);
 
       if (incomingMsg.type === "typing") {
-        console.log(incomingMsg.content);
-
         setIsOtherUserTyping(true);
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = setTimeout(
@@ -38,14 +54,8 @@ export default function Chat() {
           2000
         );
       } else if (incomingMsg.type === "history") {
-        if (typeof incomingMsg.content === "object") {
-          const historyData = incomingMsg.content;
-          setChatBox(historyData);
-        } else {
-          console.error(
-            "Received history type but content was a string:",
-            incomingMsg.content
-          );
+        if (Array.isArray(incomingMsg.content)) {
+          setChatBox(incomingMsg.content);
         }
       } else {
         setMessages((prev) => [...prev, incomingMsg]);
@@ -53,9 +63,25 @@ export default function Chat() {
       }
     };
 
-    ws.onclose = () => console.log("Disconnected");
+    ws.onclose = (e) => {
+      console.log("❌ Disconnected:", e.code);
+    };
 
-    return () => ws.close();
+    ws.onerror = (err) => {
+      console.error("WebSocket Error:", err);
+    };
+
+    // CLEANUP FUNCTION
+    return () => {
+      isUnmounted = true; // Mark as dead
+
+      // ONLY close if it's already open.
+      // If it's still connecting, the onopen guard above will handle the closure.
+      if (ws.readyState === WebSocket.OPEN) {
+        console.log("🧹 Cleaning up established connection...");
+        ws.close();
+      }
+    };
   }, [user?.uid]);
 
   useEffect(() => {

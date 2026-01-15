@@ -17,7 +17,7 @@ export default function Login() {
     if (isOk) {
       setEmail("");
       setPassword("");
-      setTimeout(() => navigate("/login"), 2000);
+      setTimeout(() => navigate("/"), 2000);
     }
   };
 
