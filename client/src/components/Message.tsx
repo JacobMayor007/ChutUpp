@@ -63,6 +63,15 @@ export default function Message({
 
     socketRef.current.send(JSON.stringify(msg));
 
+    socketRef.current.send(
+      JSON.stringify({
+        type: "chat",
+        user_id: user?.uid,
+        content: "",
+        receiver_id: targetUserId,
+      })
+    );
+
     setMessages((prev) => [...prev, msg]);
     setContent("");
   };
@@ -82,7 +91,9 @@ export default function Message({
                 : "bg-gray-700 self-start text-white"
             }`}
           >
-            <p className="text-white text-sm">{m.content}</p>
+            {typeof m.content === "string" ? (
+              <p className="text-white text-sm">{m.content}</p>
+            ) : null}
           </div>
         ))}
         {isOtherUserTyping && (
