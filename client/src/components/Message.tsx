@@ -82,9 +82,7 @@ export default function Message({
                 : "bg-gray-700 self-start text-white"
             }`}
           >
-            {typeof m.content === "string" ? (
-              <p className="text-white text-sm">{m.content}</p>
-            ) : null}
+            <p className="text-white text-sm">{m.content}</p>
           </div>
         ))}
         {isOtherUserTyping && (

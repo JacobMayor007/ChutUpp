@@ -1,7 +1,5 @@
 import { Eye, EyeOff, type LucideIcon } from "lucide-react";
 import { useState } from "react";
-import DivBox from "./DivBox";
-import { useTheme } from "../context/ThemeContext";
 
 type InputBoxProps = {
   icon: LucideIcon;
@@ -27,27 +25,23 @@ export default function InputBox({
   className,
 }: InputBoxProps) {
   const [show, setShow] = useState(false);
-  const { color } = useTheme();
-  const iconColor = color === "light" ? "black" : "white";
 
   return (
-    <DivBox
-      className={`${className} border-[2px] border-slate-300 grid grid-cols-12 gap-1 items-center pl-4  rounded-lg  ${heightInputBox} `}
+    <div
+      className={`${className} border-[2px] border-slate-300 grid grid-cols-12 gap-1 items-center pl-4  rounded-lg  ${heightInputBox} w-2/3`}
     >
       <Icon
         className="col-span-1"
         width={widthIcon}
         height={heightIcon}
-        color={iconColor}
+        color="white"
       />
       <input
         placeholder={placeholder}
         type={show ? `text` : type}
         value={value}
         onChange={(e) => onChangeValue(e.target.value)}
-        className={`h-full ${
-          iconColor === "white" ? `text-white` : `text-black`
-        } placeholder:text-slate-700 outline-0 ${
+        className={`h-full text-white placeholder:text-slate-700 outline-0 ${
           type === "password" ? `col-span-10` : `col-span-11`
         } `}
       />
@@ -66,6 +60,6 @@ export default function InputBox({
             onClick={() => setShow(true)}
           />
         ))}
-    </DivBox>
+    </div>
   );
 }

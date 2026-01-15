@@ -1,4 +1,4 @@
-export type ChatList = {
+export type Chat = {
   chat_id: string;
   last_message: string;
   last_sender_email: string;
@@ -7,20 +7,9 @@ export type ChatList = {
   updated_at: string;
 };
 
-// Define the two possible shapes of a message
-type TextMessage = {
-  type: "message" | "typing";
+export type ChatMessage = {
+  type: string;
+  user_id: string;
+  receiver_id: string;
   content: string;
-  user_id: string;
-  receiver_id: string;
 };
-
-type HistoryMessage = {
-  type: "history";
-  content: ChatList[];
-  user_id: string;
-  receiver_id: string;
-};
-
-// The Final Type is a Union of both
-export type ChatMessage = TextMessage | HistoryMessage;

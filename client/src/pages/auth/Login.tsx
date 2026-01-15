@@ -17,7 +17,7 @@ export default function Login() {
     if (isOk) {
       setEmail("");
       setPassword("");
-      setTimeout(() => navigate("/"), 2000);
+      setTimeout(() => navigate("/login"), 2000);
     }
   };
 
@@ -47,7 +47,7 @@ export default function Login() {
           placeholder="Email"
           heightInputBox="h-12"
           type="text"
-          className="mb-5 w-2/3"
+          className="mb-5"
         />
 
         <InputBox
@@ -57,7 +57,6 @@ export default function Login() {
           value={password}
           onChangeValue={setPassword}
           placeholder="Password"
-          className="w-2/3"
           heightInputBox="h-12"
           type="password"
         />

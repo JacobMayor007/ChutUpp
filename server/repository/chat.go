@@ -26,8 +26,8 @@ type ChatSummary struct {
 	LastMessage     string    `json:"last_message"`
 	LastSenderEmail string    `json:"last_sender_email"`
 	LastSenderId    string    `json:"last_sender_id"`
-	RecipientEmail  string    `json:"other_user_id"`
-	RecipientId     string    `json:"other_user_email"`
+	RecipientEmail  string    `json:"other_user_id"`    // Match your JSON output
+	RecipientId     string    `json:"other_user_email"` // Match your JSON output
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }

@@ -7,7 +7,7 @@ import DivBox from "../components/DivBox";
 import MyText from "../components/MyText";
 import { useAuth } from "../context/AuthContext";
 import { useEffect, useRef, useState } from "react";
-import type { ChatMessage, ChatList } from "../types";
+import type { ChatMessage } from "../types";
 
 export default function Chat() {
   const { logout } = useLogout();
@@ -15,73 +15,39 @@ export default function Chat() {
   const { color, setColor } = useTheme();
   const [content, setContent] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [chatBox, setChatBox] = useState<ChatList[]>([]);
   const socketRef = useRef<WebSocket | null>(null);
   const [targetUserId, setTargetUserId] = useState("");
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!user?.uid) return;
-
-    // 1. Logic Flag: Prevents processing messages if component is dead
-    let isUnmounted = false;
-
-    console.log("🚀 Attempting connection...");
-    const ws = new WebSocket(`ws://localhost:8080/ws?userId=${user.uid}`);
+    const ws = new WebSocket(`ws://localhost:8080/ws?userId=${user?.uid}`);
     socketRef.current = ws;
 
-    ws.onopen = () => {
-      // If React unmounted this during the handshake, close it now.
-      if (isUnmounted) {
-        ws.close();
-        return;
-      }
-      console.log("✅ Connected to Chat Server");
-      ws.send(JSON.stringify({ type: "chat", user_id: user.uid, content: "" }));
-    };
+    ws.onopen = () => console.log("Connected to Chat Server");
 
     ws.onmessage = (event) => {
-      if (isUnmounted) return; // Don't update state on a dead component
-
       const incomingMsg: ChatMessage = JSON.parse(event.data);
+      console.log("Incoming Message:", incomingMsg);
 
       if (incomingMsg.type === "typing") {
+        console.log(incomingMsg.content);
+
         setIsOtherUserTyping(true);
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = setTimeout(
           () => setIsOtherUserTyping(false),
           2000
         );
-      } else if (incomingMsg.type === "history") {
-        if (Array.isArray(incomingMsg.content)) {
-          setChatBox(incomingMsg.content);
-        }
       } else {
         setMessages((prev) => [...prev, incomingMsg]);
         setIsOtherUserTyping(false);
       }
     };
 
-    ws.onclose = (e) => {
-      console.log("❌ Disconnected:", e.code);
-    };
+    ws.onclose = () => console.log("Disconnected");
 
-    ws.onerror = (err) => {
-      console.error("WebSocket Error:", err);
-    };
-
-    // CLEANUP FUNCTION
-    return () => {
-      isUnmounted = true; // Mark as dead
-
-      // ONLY close if it's already open.
-      // If it's still connecting, the onopen guard above will handle the closure.
-      if (ws.readyState === WebSocket.OPEN) {
-        console.log("🧹 Cleaning up established connection...");
-        ws.close();
-      }
-    };
+    return () => ws.close();
   }, [user?.uid]);
 
   useEffect(() => {
@@ -93,8 +59,6 @@ export default function Chat() {
   }, [user?.uid]);
 
   console.log("Other user typing?: ", isOtherUserTyping);
-
-  console.log(chatBox);
 
   return (
     <DivBox className="h-screen flex flex-col  px-10 py-6 ">
@@ -137,7 +101,7 @@ export default function Chat() {
       </div>
       <div className="h-full grid grid-cols-12 gap-4 overflow-hidden">
         <div className="col-span-3">
-          <ChatBar chatBox={chatBox} />
+          <ChatBar />
         </div>
         <div className="col-span-9 h-full overflow-hidden">
           <Message
