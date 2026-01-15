@@ -47,7 +47,7 @@ export default function Login() {
           placeholder="Email"
           heightInputBox="h-12"
           type="text"
-          className="mb-5"
+          className="mb-5 w-2/3"
         />
 
         <InputBox
@@ -57,6 +57,7 @@ export default function Login() {
           value={password}
           onChangeValue={setPassword}
           placeholder="Password"
+          className="w-2/3"
           heightInputBox="h-12"
           type="password"
         />

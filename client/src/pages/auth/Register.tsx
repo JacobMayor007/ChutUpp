@@ -47,7 +47,7 @@ export default function Register() {
           placeholder="Email"
           heightInputBox="h-12"
           type="text"
-          className="mb-5"
+          className="mb-5 w-2/3"
         />
 
         <InputBox
@@ -58,6 +58,7 @@ export default function Register() {
           onChangeValue={setPassword}
           placeholder="Password"
           heightInputBox="h-12"
+          className="w-2/3"
           type="password"
         />
 

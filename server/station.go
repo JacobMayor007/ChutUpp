@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"sync"
 	"time"
@@ -9,11 +8,11 @@ import (
 )
 
 type Content struct {
-	Type       string    `json:"type"`
-	Message    string    `json:"content"`
-	ClientID   string    `json:"user_id"`
-	ReceiverID string    `json:"receiver_id"`
-	CreatedAt  time.Time `json:"created_at"`
+	Type       string      `json:"type"`
+	Message    interface{} `json:"content"`
+	ClientID   string      `json:"user_id"`
+	ReceiverID string      `json:"receiver_id"`
+	CreatedAt  time.Time   `json:"created_at"`
 }
 
 type Station struct {
@@ -70,7 +69,7 @@ func (s *Station) Run() {
 			// A. REAL-TIME CHAT MESSAGE
 			case "message":
 				// Save to DB
-				if _, err := s.Repo.SetChats(msg.ClientID, msg.ReceiverID, msg.Message); err != nil {
+				if _, err := s.Repo.SetChats(msg.ClientID, msg.ReceiverID, msg.Message.(string)); err != nil {
 					log.Printf("Error saving message: %s", err)
 					continue
 				}
@@ -112,41 +111,30 @@ func (s *Station) Run() {
 				} else {
 					log.Printf("Message failed: Recipient %s is offline", msg.ReceiverID)
 				}
-			case "chat":
-				// 1. Fetch from DB
+			case "chat": // Fetching history/list
 				chats, err := s.Repo.GetChats(msg.ClientID)
 				if err != nil {
-					log.Printf("Error fetching history: %s", err)
 					continue
 				}
-
-				// 2. Marshal data to JSON string
-				// We convert the complex 'chats' object into a string so it fits in the 'Message' field
-				historyJSON, err := json.Marshal(chats)
-				if err != nil {
-					log.Printf("Error marshalling history: %s", err)
-					continue
-				}
-
-				// 3. Construct response for the REQUESTER
+				// Put the RAW slice into the message. No manual JSON marshalling!
 				response := Content{
-					Type:       "history",           // Use a distinct type so frontend knows to parse it
-					Message:    string(historyJSON), // The actual data
+					Type:       "history",
+					Message:    chats,
 					ClientID:   "server",
 					ReceiverID: msg.ClientID,
 					CreatedAt:  time.Now(),
 				}
-
-				// 4. Send back to the SENDER (The person who asked for history)
-				s.mx.RLock()
-				requester, ok := s.Users[msg.ClientID]
-				s.mx.RUnlock()
-
-				if ok {
-					requester.Send <- response
-					log.Printf("Sent chat history to %s", msg.ClientID)
-				}
+				s.routeToUser(msg.ClientID, response)
 			}
 		}
+	}
+}
+
+func (s *Station) routeToUser(id string, msg Content) {
+	s.mx.RLock()
+	user, ok := s.Users[id]
+	s.mx.RUnlock()
+	if ok {
+		user.Send <- msg
 	}
 }
