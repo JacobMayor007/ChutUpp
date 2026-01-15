@@ -1,6 +1,6 @@
 import { Mails } from "lucide-react";
 import DivBox from "./DivBox";
-import { useTheme } from "../context/ThemeContext";
+// import { useTheme } from "../context/ThemeContext";
 import MyText from "./MyText";
 import { useState } from "react";
 import SearchUser from "./SearchUser";
@@ -8,7 +8,7 @@ import { useChat } from "../hooks/api/chatHooks";
 import { useAuth } from "../context/AuthContext";
 
 export default function ChatBar() {
-  const { color } = useTheme();
+  // const { color } = useTheme();
   // const iconColor = color === "light" ? "black" : "white";
   const { user } = useAuth();
   const [modal, setModal] = useState("");
