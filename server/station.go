@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"sync"
 	"time"
@@ -10,7 +9,7 @@ import (
 
 type Content struct {
 	Type       string    `json:"type"`
-	Message    string    `json:"content"`
+	Message    any       `json:"content"` // Now supports string OR ChatSummary slice
 	ClientID   string    `json:"user_id"`
 	ReceiverID string    `json:"receiver_id"`
 	CreatedAt  time.Time `json:"created_at"`
@@ -19,7 +18,7 @@ type Content struct {
 type Station struct {
 	mx         sync.RWMutex
 	Users      map[string]*User
-	Broadcast  chan Content
+	Broadcast  chan Content // Simpler channel
 	Register   chan *User
 	UnRegister chan *User
 	Repo       repository.ChatRepository
@@ -69,12 +68,18 @@ func (s *Station) Run() {
 
 			// A. REAL-TIME CHAT MESSAGE
 			case "message":
-				// Save to DB
-				if _, err := s.Repo.SetChats(msg.ClientID, msg.ReceiverID, msg.Message); err != nil {
+				contentStr, ok := msg.Message.(string)
+
+				if !ok {
+					log.Printf("Warning: Received non-string message from %s", msg.ClientID)
+					continue // Skip this message instead of crashing
+				}
+
+				// Save to DB using the safe string
+				if _, err := s.Repo.SetChats(msg.ClientID, msg.ReceiverID, contentStr); err != nil {
 					log.Printf("Error saving message: %s", err)
 					continue
 				}
-
 				// Find Receiver and Send
 				s.mx.RLock()
 				receiver, ok := s.Users[msg.ReceiverID]
@@ -114,39 +119,62 @@ func (s *Station) Run() {
 				}
 			case "chat":
 				// 1. Fetch from DB
-				chats, err := s.Repo.GetChats(msg.ClientID)
+
+				log.Printf("Receiver Id: %s", msg.ReceiverID)
+
+				chatsSender, err := s.Repo.GetChats(msg.ClientID)
 				if err != nil {
 					log.Printf("Error fetching history: %s", err)
 					continue
 				}
 
-				// 2. Marshal data to JSON string
-				// We convert the complex 'chats' object into a string so it fits in the 'Message' field
-				historyJSON, err := json.Marshal(chats)
+				chatsReceiver, err := s.Repo.GetChats(msg.ReceiverID)
 				if err != nil {
-					log.Printf("Error marshalling history: %s", err)
+					log.Printf("Error fetching history: %s", err)
 					continue
 				}
-
 				// 3. Construct response for the REQUESTER
 				response := Content{
-					Type:       "history",           // Use a distinct type so frontend knows to parse it
-					Message:    string(historyJSON), // The actual data
+					Type:       "history",   // Use a distinct type so frontend knows to parse it
+					Message:    chatsSender, // The actual data
 					ClientID:   "server",
 					ReceiverID: msg.ClientID,
 					CreatedAt:  time.Now(),
 				}
 
-				// 4. Send back to the SENDER (The person who asked for history)
-				s.mx.RLock()
-				requester, ok := s.Users[msg.ClientID]
-				s.mx.RUnlock()
-
-				if ok {
-					requester.Send <- response
-					log.Printf("Sent chat history to %s", msg.ClientID)
+				response2 := Content{
+					Type:       "history",     // Use a distinct type so frontend knows to parse it
+					Message:    chatsReceiver, // The actual data
+					ClientID:   "server",
+					ReceiverID: msg.ReceiverID,
+					CreatedAt:  time.Now(),
 				}
+
+				// 4. Send back to the SENDER (The person who asked for history)
+
+				s.emit(msg.ClientID, response)
+				if msg.ReceiverID != "" && msg.ReceiverID != msg.ClientID {
+
+					s.emit(msg.ReceiverID, response2)
+				}
+
 			}
+		}
+	}
+}
+
+func (s *Station) emit(userID string, msg Content) {
+	s.mx.RLock()
+	user, ok := s.Users[userID]
+	s.mx.RUnlock()
+
+	if ok {
+		select {
+		case user.Send <- msg:
+			log.Printf("Chats go to: %s", userID)
+		case <-time.After(time.Millisecond * 50):
+			// If the user's channel is full/blocked, don't hang the whole server
+			log.Printf("Slow consumer: skipping message for %s", userID)
 		}
 	}
 }

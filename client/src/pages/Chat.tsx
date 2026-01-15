@@ -7,7 +7,7 @@ import DivBox from "../components/DivBox";
 import MyText from "../components/MyText";
 import { useAuth } from "../context/AuthContext";
 import { useEffect, useRef, useState } from "react";
-import type { ChatMessage } from "../types";
+import type { ChatMessage, ChatList } from "../types";
 
 export default function Chat() {
   const { logout } = useLogout();
@@ -15,6 +15,7 @@ export default function Chat() {
   const { color, setColor } = useTheme();
   const [content, setContent] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [chatBox, setChatBox] = useState<ChatList[]>([]);
   const socketRef = useRef<WebSocket | null>(null);
   const [targetUserId, setTargetUserId] = useState("");
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
@@ -24,11 +25,21 @@ export default function Chat() {
     const ws = new WebSocket(`ws://localhost:8080/ws?userId=${user?.uid}`);
     socketRef.current = ws;
 
-    ws.onopen = () => console.log("Connected to Chat Server");
+    ws.onopen = () => {
+      console.log("Connected to Chat Server");
+      // 2. IMMEDIATELY request the recent chat list
+      ws.send(
+        JSON.stringify({
+          type: "chat",
+          user_id: user?.uid,
+          content: "",
+        })
+      );
+    };
 
     ws.onmessage = (event) => {
       const incomingMsg: ChatMessage = JSON.parse(event.data);
-      console.log("Incoming Message:", incomingMsg);
+      console.log("Incoming messsages: ", incomingMsg);
 
       if (incomingMsg.type === "typing") {
         console.log(incomingMsg.content);
@@ -39,6 +50,16 @@ export default function Chat() {
           () => setIsOtherUserTyping(false),
           2000
         );
+      } else if (incomingMsg.type === "history") {
+        if (typeof incomingMsg.content === "object") {
+          const historyData = incomingMsg.content;
+          setChatBox(historyData);
+        } else {
+          console.error(
+            "Received history type but content was a string:",
+            incomingMsg.content
+          );
+        }
       } else {
         setMessages((prev) => [...prev, incomingMsg]);
         setIsOtherUserTyping(false);
@@ -59,6 +80,8 @@ export default function Chat() {
   }, [user?.uid]);
 
   console.log("Other user typing?: ", isOtherUserTyping);
+
+  console.log("Chat Box", chatBox);
 
   return (
     <DivBox className="h-screen flex flex-col  px-10 py-6 ">
@@ -100,10 +123,10 @@ export default function Chat() {
         )}
       </div>
       <div className="h-full grid grid-cols-12 gap-4 overflow-hidden">
-        <div className="col-span-3">
-          <ChatBar />
+        <div className="sm:col-span-5 md:col-span-4 lg:col-span-3">
+          <ChatBar chatBox={chatBox} />
         </div>
-        <div className="col-span-9 h-full overflow-hidden">
+        <div className="sm:col-span-7 md:col-span-8 lg:col-span-9 h-full overflow-hidden">
           <Message
             user={user}
             content={content}
