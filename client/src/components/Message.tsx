@@ -1,31 +1,26 @@
 import { Send } from "lucide-react";
 import MessageBox from "./InputMessage";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChatMessage } from "../types";
 import type { User } from "firebase/auth";
+import { useSocket } from "../context/SocketContext";
+import { useChatContext } from "../context/ChatContext";
 
 type MessageProps = {
   user: User | null;
-  content: string; // Changed from optional to required for easier handling
-  setContent: (content: string) => void;
   messages: ChatMessage[]; // Changed from optional to required
-  setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>; // 2. Correct State Setter Type
-  socketRef: React.RefObject<WebSocket | null>;
-  targetUserId: string;
   isOtherUserTyping: boolean;
 };
 
 export default function Message({
-  content,
-  setContent,
   messages,
-  socketRef,
-  targetUserId,
-  setMessages,
   isOtherUserTyping,
   user,
 }: MessageProps) {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const [content, setContent] = useState("");
+  const { sendChat, sendMessage, sendTyping } = useSocket();
+  const { otherUser } = useChatContext();
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -36,52 +31,26 @@ export default function Message({
   const handleInputChange = (val: string) => {
     setContent(val);
 
-    if (
-      socketRef?.current &&
-      socketRef?.current.readyState === WebSocket.OPEN
-    ) {
-      socketRef.current.send(
-        JSON.stringify({
-          type: "typing",
-          sender_id: user?.uid,
-          receiver_id: targetUserId,
-          content: "",
-        })
-      );
-    }
+    sendTyping(otherUser?.user_id);
   };
 
   const handleSendMessage = () => {
-    if (!content?.trim() || !socketRef?.current) return;
+    if (!content?.trim()) return;
+    if (!otherUser) return;
 
-    const msg: ChatMessage = {
-      type: "message",
-      user_id: user?.uid || "",
-      receiver_id: targetUserId,
-      content: content,
-    };
+    sendMessage(otherUser?.user_id, content);
 
-    socketRef.current.send(JSON.stringify(msg));
+    sendChat(otherUser?.user_id, content);
 
-    socketRef.current.send(
-      JSON.stringify({
-        type: "chat",
-        user_id: user?.uid,
-        content: "",
-        receiver_id: targetUserId,
-      })
-    );
-
-    setMessages((prev) => [...prev, msg]);
     setContent("");
   };
 
   return (
     <div className="bg-[#1c1e21]  h-full p-4 rounded-xl grid grid-rows-12">
       <h1 className="text-white font-bold mb-4 row-span-1">
-        Chat with User {targetUserId}
+        Chat with User {otherUser?.email}
       </h1>
-      <div className=" space-y-2 mb-4 row-span-10 overflow-y-scroll">
+      <div className=" space-y-2 mb-4 row-span-10 overflow-y-scroll px-4">
         {messages.map((m, i) => (
           <div
             key={i}
@@ -98,7 +67,7 @@ export default function Message({
         ))}
         {isOtherUserTyping && (
           <p className="text-gray-400 text-xs italic ">
-            User {targetUserId} is typing...
+            User {otherUser?.email} is typing...
           </p>
         )}
         <div ref={messagesEndRef} />
