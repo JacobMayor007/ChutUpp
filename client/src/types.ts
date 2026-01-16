@@ -1,3 +1,8 @@
+export type UserDB = {
+  user_id: string;
+  email: string;
+};
+
 export type ChatList = {
   chat_id: string;
   last_message: string;
