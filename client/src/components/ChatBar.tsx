@@ -8,6 +8,7 @@ import SearchUser from "./SearchUser";
 import type { ChatList } from "../types";
 import { useAuth } from "../context/AuthContext";
 import { useChatContext } from "../context/ChatContext";
+import { useSocket } from "../context/SocketContext";
 
 type ChatBarProps = {
   chatBox: ChatList[] | [];
@@ -18,6 +19,7 @@ export default function ChatBar({ chatBox, setMobileView }: ChatBarProps) {
   const [modal, setModal] = useState("");
   const { user } = useAuth();
   const { setOtherUser } = useChatContext();
+  const { setMessages } = useSocket();
 
   return (
     <DivBox className="h-full p-4 rounded-xl bg-[#1c1e21]">
@@ -46,6 +48,7 @@ export default function ChatBar({ chatBox, setMobileView }: ChatBarProps) {
                   user_id: data?.other_user_id,
                 });
                 setMobileView("chat");
+                setMessages([]);
               }}
               className="md:flex-col p-4 mb-4 rounded-lg flex lg:flex-row gap-4 cursor-pointer active:scale-95 "
             >

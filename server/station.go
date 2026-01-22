@@ -18,7 +18,7 @@ type Content struct {
 type Station struct {
 	mx         sync.RWMutex
 	Users      map[string]*User
-	Broadcast  chan Content // Simpler channel
+	Broadcast  chan Content 
 	Register   chan *User
 	UnRegister chan *User
 	Repo       repository.ChatRepository
