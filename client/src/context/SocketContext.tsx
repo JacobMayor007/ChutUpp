@@ -15,6 +15,7 @@ interface SocketContextType {
   sendChat: (targetId: string | undefined, content: string) => void;
   sendMessage: (targetId: string | undefined, content: string) => void;
   sendTyping: (targetId: string | undefined) => void;
+  setMessages: (messages: ChatMessage[]) => void;
   isConnected: boolean;
 }
 
@@ -120,6 +121,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         sendChat,
         sendMessage,
         sendTyping,
+        setMessages,
         isConnected,
       }}
     >
