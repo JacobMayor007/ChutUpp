@@ -41,18 +41,28 @@ func (pb *PostgreDB) Init() error {
 	if err := pb.createUserTable(); err != nil {
 		return err
 	}
+
 	if err := pb.createChatTables(); err != nil {
 		return err
 	}
+
+	if err := pb.createMessagesTable(); err != nil {
+		return err
+	}
+
+	if err := pb.allAlterTable(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (pb *PostgreDB) createUserTable() error {
 	query := `create table if not exists users (
-		user_id text primary key,
-		email text unique,
-		created_at timestamp default now(),
-        updated_at timestamp default now()
+		user_id text primary key not null,
+		email text unique not null,
+		created_at timestamp default now() not null,
+        updated_at timestamp default now() not null
 	)`
 
 	_, err := pb.Db.Exec(query)
@@ -75,13 +85,37 @@ func (pb *PostgreDB) createUserTable() error {
 	return err
 }
 
+func (pb *PostgreDB) createMessagesTable() error {
+	sqlStatement := `CREATE TABLE IF NOT EXISTS messages (
+		message_id uuid primary key default uuid_generate_v4(),
+		user_id text references users(user_id),
+		chat_id uuid references chats(chat_id),
+		content text,
+		created_at timestamp DEFAULT NOW(),
+        updated_at timestamp DEFAULT NOW()
+	)`
+
+	if _, err := pb.Db.Exec(sqlStatement); err != nil {
+		fmt.Printf("error in creating messages table: %s", err)
+		return err
+	}
+
+	triggerParticipants := `
+        DROP TRIGGER IF EXISTS update_messages_timestamp ON messages;
+        CREATE TRIGGER update_messages_timestamp
+        AFTER UPDATE ON messages
+        FOR EACH ROW
+        EXECUTE FUNCTION set_timestamp();
+    `
+	_, err := pb.Db.Exec(triggerParticipants)
+	return err
+}
+
 func (pb *PostgreDB) createChatTables() error {
 	stChats := `CREATE TABLE IF NOT EXISTS chats (
         chat_id uuid primary key default uuid_generate_v4(),
-        last_message text,
 		user_id text references users(user_id),
-        created_at timestamp DEFAULT NOW(),
-        updated_at timestamp DEFAULT NOW()
+        created_at timestamp DEFAULT NOW()
     )`
 
 	if _, err := pb.Db.Exec(stChats); err != nil {
@@ -106,7 +140,7 @@ func (pb *PostgreDB) createChatTables() error {
 	trigger := `
         DROP TRIGGER IF EXISTS update_chat_timestamp ON chats;
         CREATE TRIGGER update_chat_timestamp
-        BEFORE UPDATE ON chats
+        AFTER UPDATE ON chats
         FOR EACH ROW
         EXECUTE FUNCTION set_timestamp();
     `
@@ -118,10 +152,25 @@ func (pb *PostgreDB) createChatTables() error {
 	triggerParticipants := `
         DROP TRIGGER IF EXISTS update_participants_timestamp ON chat_participants;
         CREATE TRIGGER update_participants_timestamp
-        BEFORE UPDATE ON chat_participants
+        AFTER UPDATE ON chat_participants
         FOR EACH ROW
         EXECUTE FUNCTION set_timestamp();
     `
 	_, err := pb.Db.Exec(triggerParticipants)
 	return err
+}
+
+func (pb *PostgreDB) allAlterTable() error {
+	st := `alter table chats
+		add column if not exists 
+		message_data uuid 
+		references messages(message_id)
+	`
+
+	if _, err := pb.Db.Exec(st); err != nil {
+		fmt.Printf("Error in alter table")
+		return err
+	}
+
+	return nil
 }

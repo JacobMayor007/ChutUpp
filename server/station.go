@@ -18,10 +18,10 @@ type Content struct {
 type Station struct {
 	mx         sync.RWMutex
 	Users      map[string]*User
-	Broadcast  chan Content 
+	Broadcast  chan Content
 	Register   chan *User
 	UnRegister chan *User
-	Repo       repository.ChatRepository
+	ChatRepo   repository.ChatRepository
 }
 
 func NewStation(repo repository.ChatRepository) *Station {
@@ -30,7 +30,7 @@ func NewStation(repo repository.ChatRepository) *Station {
 		Register:   make(chan *User),
 		UnRegister: make(chan *User),
 		Users:      make(map[string]*User),
-		Repo:       repo,
+		ChatRepo:   repo,
 	}
 }
 
@@ -76,7 +76,7 @@ func (s *Station) Run() {
 				}
 
 				// Save to DB using the safe string
-				if _, err := s.Repo.SetChats(msg.ClientID, msg.ReceiverID, contentStr); err != nil {
+				if _, err := s.ChatRepo.SetChats(msg.ClientID, msg.ReceiverID, contentStr); err != nil {
 					log.Printf("Error saving message: %s", err)
 					continue
 				}
@@ -122,13 +122,13 @@ func (s *Station) Run() {
 
 				log.Printf("Receiver Id: %s", msg.ReceiverID)
 
-				chatsSender, err := s.Repo.GetChats(msg.ClientID)
+				chatsSender, err := s.ChatRepo.GetChats(msg.ClientID)
 				if err != nil {
 					log.Printf("Error fetching history: %s", err)
 					continue
 				}
 
-				chatsReceiver, err := s.Repo.GetChats(msg.ReceiverID)
+				chatsReceiver, err := s.ChatRepo.GetChats(msg.ReceiverID)
 				if err != nil {
 					log.Printf("Error fetching history: %s", err)
 					continue
