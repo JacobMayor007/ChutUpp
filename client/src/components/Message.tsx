@@ -31,19 +31,20 @@ export default function Message({
   const handleInputChange = (val: string) => {
     setContent(val);
 
-    sendTyping(otherUser?.user_id);
+    sendTyping("iJINQBeJ8Le8YgxfnteIJeLwiJx2");
   };
 
   const handleSendMessage = () => {
     if (!content?.trim()) return;
-    if (!otherUser) return;
 
-    sendMessage(otherUser?.user_id, content);
+    sendMessage("iJINQBeJ8Le8YgxfnteIJeLwiJx2", content);
 
-    sendChat(otherUser?.user_id, content);
+    sendChat("iJINQBeJ8Le8YgxfnteIJeLwiJx2", content);
 
     setContent("");
   };
+
+  console.log(otherUser);
 
   return (
     <div className="bg-[#1c1e21]  h-full p-4 rounded-xl grid grid-rows-12">

@@ -21,6 +21,8 @@ export default function ChatBar({ chatBox, setMobileView }: ChatBarProps) {
   const { setOtherUser } = useChatContext();
   const { setMessages } = useSocket();
 
+  console.log(chatBox);
+
   return (
     <DivBox className="h-full p-4 rounded-xl bg-[#1c1e21]">
       {modal === "search" && <SearchUser setModal={setModal} />}

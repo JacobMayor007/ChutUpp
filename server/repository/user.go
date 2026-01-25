@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	database "websocket_server/config"
 	"websocket_server/model"
 )
@@ -32,14 +33,19 @@ func (userDb *UserDB) CreateUserAccount(user *model.User) error {
 func (userDb *UserDB) IsIdExist(id string) error {
 	var exists bool
 
-	query := `
-		SELECT EXISTS(SELECT 1 FROM users WHERE user_id = $1)
-	`
+	query := `SELECT EXISTS(SELECT 1 FROM users WHERE user_id = $1)`
 
+	// This scans 'true' or 'false' into the 'exists' variable
 	err := userDb.sqlDB.Db.QueryRow(query, id).Scan(&exists)
 
+	// Check if the database query actually failed (syntax, connection, etc)
 	if err != nil {
 		return err
+	}
+
+	// Check the actual result of the EXISTS check
+	if !exists {
+		return fmt.Errorf("user with id %s not found", id)
 	}
 
 	return nil
