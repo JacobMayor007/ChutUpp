@@ -137,18 +137,6 @@ func (pb *PostgreDB) createChatTables() error {
 		return err
 	}
 
-	trigger := `
-        DROP TRIGGER IF EXISTS update_chat_timestamp ON chats;
-        CREATE TRIGGER update_chat_timestamp
-        AFTER UPDATE ON chats
-        FOR EACH ROW
-        EXECUTE FUNCTION set_timestamp();
-    `
-	if _, err := pb.Db.Exec(trigger); err != nil {
-		fmt.Printf("error in creating chats trigger: %s", err)
-		return err
-	}
-
 	triggerParticipants := `
         DROP TRIGGER IF EXISTS update_participants_timestamp ON chat_participants;
         CREATE TRIGGER update_participants_timestamp

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 	database "websocket_server/config"
 	"websocket_server/repository"
 	"websocket_server/routes"
@@ -71,7 +72,17 @@ func main() {
 		}
 
 		if err := userRepository.IsIdExist(userIDStr); err != nil {
-			log.Println("error on id")
+			log.Printf("ID Not Found: %s", userIDStr)
+
+			// SEND ERROR TO CLIENT BEFORE RETURNING
+			c.WriteJSON(map[string]string{
+				"type":    "error",
+				"content": "User ID does not exist in database",
+			})
+
+			// Properly close the socket so React knows why
+			msg := websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "User not authorized")
+			c.WriteControl(websocket.CloseMessage, msg, time.Now().Add(time.Second))
 			return
 		}
 

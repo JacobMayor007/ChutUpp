@@ -69,6 +69,7 @@ func (s *Station) Run() {
 			// A. REAL-TIME CHAT MESSAGE
 			case "message":
 				contentStr, ok := msg.Message.(string)
+				log.Printf("Message sent from %s, to %s", msg.ClientID, msg.ReceiverID)
 
 				if !ok {
 					log.Printf("Warning: Received non-string message from %s", msg.ClientID)
@@ -76,7 +77,7 @@ func (s *Station) Run() {
 				}
 
 				// Save to DB using the safe string
-				if _, err := s.ChatRepo.SetChats(msg.ClientID, msg.ReceiverID, contentStr); err != nil {
+				if _, err := s.ChatRepo.SendMessage(msg.ClientID, msg.ReceiverID, contentStr); err != nil {
 					log.Printf("Error saving message: %s", err)
 					continue
 				}

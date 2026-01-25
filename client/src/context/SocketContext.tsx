@@ -48,6 +48,12 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         const incomingMsg: ChatMessage = JSON.parse(event.data);
 
+        if (incomingMsg.type === "error") {
+          console.error("Server Error:", incomingMsg.content);
+          alert(`Connection Error: ${incomingMsg.content}`); // Or use a toast notification
+          return;
+        }
+
         if (incomingMsg.type === "typing") {
           setIsOtherUserTyping(true);
           if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -84,6 +90,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       };
 
       socketRef.current.send(JSON.stringify(msg));
+      console.log(msg);
       setMessages((prev) => [...prev, msg]);
     }
   };

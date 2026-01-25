@@ -16,7 +16,7 @@ export type ChatList = {
 
 // Define the two possible shapes of a message
 type TextMessage = {
-  type: "message" | "typing";
+  type: "message" | "typing" | "error";
   content: string;
   user_id: string;
   receiver_id: string;
