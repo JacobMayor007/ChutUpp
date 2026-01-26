@@ -22,15 +22,17 @@ type Station struct {
 	Register   chan *User
 	UnRegister chan *User
 	ChatRepo   repository.ChatRepository
+	MessRepo   repository.MessageInterface
 }
 
-func NewStation(repo repository.ChatRepository) *Station {
+func NewStation(repo repository.ChatRepository, mr repository.MessageInterface) *Station {
 	return &Station{
 		Broadcast:  make(chan Content),
 		Register:   make(chan *User),
 		UnRegister: make(chan *User),
 		Users:      make(map[string]*User),
 		ChatRepo:   repo,
+		MessRepo:   mr,
 	}
 }
 
@@ -66,7 +68,6 @@ func (s *Station) Run() {
 			// --- HANDLE DIFFERENT MESSAGE TYPES ---
 			switch msg.Type {
 
-			// A. REAL-TIME CHAT MESSAGE
 			case "message":
 				contentStr, ok := msg.Message.(string)
 				log.Printf("Message sent from %s, to %s", msg.ClientID, msg.ReceiverID)
@@ -159,6 +160,25 @@ func (s *Station) Run() {
 					s.emit(msg.ReceiverID, response2)
 				}
 
+			case "message_history":
+				log.Printf("Current User Id: %s", msg.ClientID)
+				log.Printf("Type: %s", msg.Type)
+
+				currentUserMessages, err := s.MessRepo.MessageHistory(msg.ClientID, msg.ReceiverID)
+				if err != nil {
+					log.Printf("Error fetching history: %s", err)
+					continue
+				}
+
+				response := Content{
+					Type:       "history_message",   // Use a distinct type so frontend knows to parse it
+					Message:    currentUserMessages, // The actual data
+					ClientID:   "server",
+					ReceiverID: msg.ClientID,
+					CreatedAt:  time.Now(),
+				}
+
+				s.emit(msg.ClientID, response)
 			}
 		}
 	}

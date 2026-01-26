@@ -6,24 +6,28 @@ import React, {
   useState,
 } from "react";
 import { useAuth } from "./AuthContext";
-import type { ChatMessage, ChatList } from "../types";
+import type { Message, ChatList, WSMessage } from "../types";
 
 interface SocketContextType {
-  messages: ChatMessage[];
+  messages: Message[];
   chatBox: ChatList[];
   isOtherUserTyping: boolean;
-  sendChat: (targetId: string | undefined, content: string) => void;
-  sendMessage: (targetId: string | undefined, content: string) => void;
-  sendTyping: (targetId: string | undefined) => void;
-  setMessages: (messages: ChatMessage[]) => void;
   isConnected: boolean;
+  sendMessage: (receiverId: string | undefined, content: string) => void;
+  sendTyping: (receiverId: string | undefined) => void;
+  loadMessageHistory: (
+    userId: string | undefined,
+    receiverId: string | undefined
+  ) => void;
+  loadChatHistory: (targetId: string | undefined, content: string) => void;
+  clearMessages: () => void;
 }
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [chatBox, setChatBox] = useState<ChatList[]>([]);
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -34,89 +38,185 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (!user?.uid) return;
 
-    // Initialize WebSocket
     const ws = new WebSocket(`ws://localhost:8080/ws?userId=${user.uid}`);
     socketRef.current = ws;
 
     ws.onopen = () => {
       setIsConnected(true);
-      // Request initial chat history/list
-      ws.send(JSON.stringify({ type: "chat", user_id: user.uid, content: "" }));
+      console.log("WebSocket Connected");
+      ws.send(
+        JSON.stringify({
+          type: "chat",
+          user_id: user.uid,
+          content: "",
+        })
+      );
     };
 
     ws.onmessage = (event) => {
       try {
-        const incomingMsg: ChatMessage = JSON.parse(event.data);
+        const data: WSMessage = JSON.parse(event.data);
+        console.log(data);
 
-        if (incomingMsg.type === "error") {
-          console.error("Server Error:", incomingMsg.content);
-          alert(`Connection Error: ${incomingMsg.content}`); // Or use a toast notification
-          return;
-        }
-
-        if (incomingMsg.type === "typing") {
-          setIsOtherUserTyping(true);
-          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-          typingTimeoutRef.current = setTimeout(
-            () => setIsOtherUserTyping(false),
-            2000
-          );
-        } else if (incomingMsg.type === "history") {
-          setChatBox(incomingMsg.content as unknown as ChatList[]);
-        } else {
-          setMessages((prev) => [...prev, incomingMsg]);
-          setIsOtherUserTyping(false);
-        }
+        handleWebSocketMessage(data);
       } catch (err) {
-        console.error("WebSocket Message Error:", err);
+        console.error("Failed to parse WebSocket message:", err);
       }
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
     };
 
     ws.onclose = () => {
       setIsConnected(false);
-      console.log("WebSocket Disconnected");
+      console.log("WebSocket disconnected");
     };
 
-    return () => ws.close();
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      ws.close();
+    };
   }, [user?.uid]);
 
-  const sendMessage = (targetId: string | undefined, content: string) => {
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      const msg: ChatMessage = {
+  const handleWebSocketMessage = (data: WSMessage) => {
+    switch (data.type) {
+      case "error":
+        console.error("Server error:", data.content);
+        alert(`Connection Error: ${data.content}`);
+        break;
+
+      case "typing":
+        setIsOtherUserTyping(true);
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
+        typingTimeoutRef.current = setTimeout(() => {
+          setIsOtherUserTyping(false);
+        }, 2000);
+        break;
+
+      case "history":
+        setChatBox(data.content);
+        break;
+
+      case "history_message":
+        // Transform server format to our Message format
+        const formattedMessages: Message[] = data.content.map((msg) => ({
+          message_id: msg.message_id,
+          content: msg.content,
+          sender_id: msg.current_user, // Map current_user to sender_id
+          receiver_id: msg.other_user, // Map other_user to receiver_id
+          created_at: msg.created_at,
+        }));
+        setMessages(formattedMessages);
+        break;
+
+      case "message":
+        const newMessage: Message = {
+          content: data.content,
+          sender_id: data.user_id,
+          receiver_id: data.receiver_id,
+          created_at: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, newMessage]);
+        setIsOtherUserTyping(false);
+        break;
+    }
+  };
+
+  const sendMessage = (receiverId: string | undefined, content: string) => {
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+      console.error("WebSocket is not connected");
+      return;
+    }
+
+    if (!user?.uid || !receiverId) {
+      console.error("User not authenticated or receiver not specified");
+      return;
+    }
+
+    const message: Message = {
+      content,
+      sender_id: user.uid,
+      receiver_id: receiverId,
+      created_at: new Date().toISOString(),
+    };
+
+    // Optimistically add to UI
+    setMessages((prev) => [...prev, message]);
+
+    // Send to server
+    socketRef.current.send(
+      JSON.stringify({
         type: "message",
-        user_id: user?.uid || "",
-        receiver_id: targetId || "",
+        user_id: user.uid,
+        receiver_id: receiverId,
+        content,
+      })
+    );
+
+    loadChatHistory(receiverId, content);
+  };
+
+  const sendTyping = (receiverId: string | undefined) => {
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    if (!receiverId) return;
+
+    socketRef.current.send(
+      JSON.stringify({
+        type: "typing",
+        receiver_id: receiverId,
+      })
+    );
+  };
+
+  const loadMessageHistory = (
+    userId: string | undefined,
+    receiverId: string | undefined
+  ) => {
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+      console.error("WebSocket is not connected");
+      return;
+    }
+
+    if (!userId || !receiverId) {
+      console.error("User ID or Receiver ID not specified");
+      return;
+    }
+
+    socketRef.current.send(
+      JSON.stringify({
+        type: "message_history",
+        sender_id: userId,
+        receiver_id: receiverId,
+        content: "",
+      })
+    );
+  };
+
+  const loadChatHistory = (targetId: string | undefined, content: string) => {
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    socketRef.current.send(
+      JSON.stringify({
+        type: "chat",
+        sender_id: user?.uid,
+        receiver_id: targetId,
         content: content,
-      };
-
-      socketRef.current.send(JSON.stringify(msg));
-      console.log(msg);
-      setMessages((prev) => [...prev, msg]);
-    }
+      })
+    );
   };
 
-  const sendChat = (targetId: string | undefined, content: string) => {
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(
-        JSON.stringify({
-          type: "chat",
-          sender_id: user?.uid,
-          receiver_id: targetId,
-          content: content,
-        })
-      );
-    }
-  };
-
-  const sendTyping = (targetId: string | undefined) => {
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(
-        JSON.stringify({
-          type: "typing",
-          receiver_id: targetId,
-        })
-      );
-    }
+  const clearMessages = () => {
+    setMessages([]);
   };
 
   return (
@@ -125,11 +225,12 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         messages,
         chatBox,
         isOtherUserTyping,
-        sendChat,
+        isConnected,
         sendMessage,
         sendTyping,
-        setMessages,
-        isConnected,
+        loadChatHistory,
+        loadMessageHistory,
+        clearMessages,
       }}
     >
       {children}
@@ -139,7 +240,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
 export const useSocket = () => {
   const context = useContext(SocketContext);
-  if (!context)
+  if (!context) {
     throw new Error("useSocket must be used within a SocketProvider");
+  }
   return context;
 };

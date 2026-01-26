@@ -30,3 +30,12 @@ type ChatSummary struct {
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }
+
+type AllMessages struct {
+	MessageID   string    `json:"message_id"`
+	Content     string    `json:"content"`
+	CurrentUser string    `json:"current_user"`
+	OtherUser   string    `json:"other_user"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}

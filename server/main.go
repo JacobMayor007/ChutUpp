@@ -52,9 +52,10 @@ func main() {
 
 	userRepository := repository.InitUserRepository(db)
 	chatRepository := repository.InitChatRepository(db)
+	messRepository := repository.MessageDatabaseInit(db)
 	routes.SetupRoutes(server, userRepository, chatRepository)
 
-	st := NewStation(chatRepository)
+	st := NewStation(chatRepository, messRepository)
 	go st.Run()
 	server.Use("/ws", func(c *fiber.Ctx) error {
 		if websocket.IsWebSocketUpgrade(c) {
