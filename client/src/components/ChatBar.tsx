@@ -5,21 +5,19 @@ import MyText from "./MyText";
 import { useState } from "react";
 import SearchUser from "./SearchUser";
 
-import type { ChatList } from "../types";
 import { useAuth } from "../context/AuthContext";
 import { useChatContext } from "../context/ChatContext";
 import { useSocket } from "../context/SocketContext";
 
 type ChatBarProps = {
-  chatBox: ChatList[] | [];
   setMobileView: (toggle: "chat" | "list") => void;
 };
 
-export default function ChatBar({ chatBox, setMobileView }: ChatBarProps) {
+export default function ChatBar({ setMobileView }: ChatBarProps) {
   const [modal, setModal] = useState("");
   const { user } = useAuth();
   const { setOtherUser } = useChatContext();
-  const { setMessages } = useSocket();
+  const { clearMessages, loadMessageHistory, chatBox } = useSocket();
 
   console.log(chatBox);
 
@@ -50,7 +48,8 @@ export default function ChatBar({ chatBox, setMobileView }: ChatBarProps) {
                   user_id: data?.other_user_id,
                 });
                 setMobileView("chat");
-                setMessages([]);
+                clearMessages();
+                loadMessageHistory(user?.uid, data?.other_user_id);
               }}
               className="md:flex-col p-4 mb-4 rounded-lg flex lg:flex-row gap-4 cursor-pointer active:scale-95 "
             >
