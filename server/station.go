@@ -10,6 +10,7 @@ import (
 type Content struct {
 	Type       string    `json:"type"`
 	Message    any       `json:"content"` // Now supports string OR ChatSummary slice
+	Search     string    `json:"search"`
 	ClientID   string    `json:"user_id"`
 	ReceiverID string    `json:"receiver_id"`
 	CreatedAt  time.Time `json:"created_at"`
@@ -23,9 +24,10 @@ type Station struct {
 	UnRegister chan *User
 	ChatRepo   repository.ChatRepository
 	MessRepo   repository.MessageInterface
+	UserRepo   repository.UserRepository
 }
 
-func NewStation(repo repository.ChatRepository, mr repository.MessageInterface) *Station {
+func NewStation(repo repository.ChatRepository, mr repository.MessageInterface, ur repository.UserRepository) *Station {
 	return &Station{
 		Broadcast:  make(chan Content),
 		Register:   make(chan *User),
@@ -33,6 +35,7 @@ func NewStation(repo repository.ChatRepository, mr repository.MessageInterface) 
 		Users:      make(map[string]*User),
 		ChatRepo:   repo,
 		MessRepo:   mr,
+		UserRepo:   ur,
 	}
 }
 
@@ -179,6 +182,27 @@ func (s *Station) Run() {
 				}
 
 				s.emit(msg.ClientID, response)
+
+			case "search":
+				log.Printf("Current user id: %s", msg.ClientID)
+
+				searchUser, err := s.UserRepo.SearchUser(msg.Search)
+
+				if err != nil {
+					log.Println("There is an error occured in searching user")
+					return
+				}
+
+				response := Content{
+					Type:       "result",   // Use a distinct type so frontend knows to parse it
+					Message:    searchUser, // The actual data
+					ClientID:   "server",
+					ReceiverID: msg.ClientID,
+					CreatedAt:  time.Now(),
+				}
+
+				s.emit(msg.ClientID, response)
+
 			}
 		}
 	}

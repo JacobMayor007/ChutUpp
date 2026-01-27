@@ -4,7 +4,6 @@ import DivBox from "./DivBox";
 import MyText from "./MyText";
 import { useState } from "react";
 import SearchUser from "./SearchUser";
-
 import { useAuth } from "../context/AuthContext";
 import { useChatContext } from "../context/ChatContext";
 import { useSocket } from "../context/SocketContext";
