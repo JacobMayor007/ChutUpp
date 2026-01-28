@@ -167,7 +167,9 @@ func (s *Station) Run() {
 				log.Printf("Current User Id: %s", msg.ClientID)
 				log.Printf("Type: %s", msg.Type)
 
-				currentUserMessages, err := s.MessRepo.MessageHistory(msg.ClientID, msg.ReceiverID)
+				before := msg.Message.(string)
+
+				currentUserMessages, err := s.MessRepo.MessageHistory(msg.ClientID, msg.ReceiverID, before)
 				if err != nil {
 					log.Printf("Error fetching history: %s", err)
 					continue
@@ -185,6 +187,7 @@ func (s *Station) Run() {
 
 			case "search":
 				log.Printf("Current user id: %s", msg.ClientID)
+				log.Printf("Data: %s", msg.Search)
 
 				searchUser, err := s.UserRepo.SearchUser(msg.Search)
 
@@ -202,7 +205,6 @@ func (s *Station) Run() {
 				}
 
 				s.emit(msg.ClientID, response)
-
 			}
 		}
 	}

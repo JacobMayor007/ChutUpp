@@ -27,6 +27,7 @@ export type Message = {
 // WebSocket message types - what comes over the wire
 export type WSMessage =
   | { type: "message"; content: string; user_id: string; receiver_id: string }
+  | { type: "result"; content: UserDB[] }
   | { type: "typing"; user_id: string; receiver_id: string }
   | { type: "error"; content: string }
   | { type: "history"; content: ChatList[] }

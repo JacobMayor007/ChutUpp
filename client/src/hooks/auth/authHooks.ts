@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { authService } from "../../service/authService";
+import { useSocket } from "../../context/SocketContext";
+import { useChatContext } from "../../context/ChatContext";
 
 export const useRegister = () => {
   const [loading, setLoading] = useState(false);
@@ -74,6 +76,8 @@ export const useLogin = () => {
 
 export const useLogout = () => {
   const [loading, setLoading] = useState(false);
+  const { clearMessages, clearResultSearchUser, clearChat } = useSocket();
+  const { setOtherUser } = useChatContext();
   const [alert, setAlert] = useState<{
     message: string;
     type?: "success" | "error";
@@ -93,6 +97,10 @@ export const useLogout = () => {
       });
     } finally {
       setLoading(false);
+      clearMessages();
+      clearResultSearchUser();
+      clearChat();
+      setOtherUser(null);
       setTimeout(() => setAlert({ message: "", type: undefined }), 3000);
     }
   };

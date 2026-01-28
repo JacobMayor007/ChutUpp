@@ -66,6 +66,12 @@ export default function Login() {
         ) : (
           <Button onClick={loginHandle} className="mt-10" label="Login" />
         )}
+
+        <Button
+          onClick={() => navigate("/register")}
+          className="mt-10"
+          label="Register"
+        />
       </div>
 
       <Alert message={alert.message} type={alert.type} />

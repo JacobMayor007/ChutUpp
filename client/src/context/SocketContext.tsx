@@ -1,26 +1,33 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useRef,
   useState,
 } from "react";
 import { useAuth } from "./AuthContext";
-import type { Message, ChatList, WSMessage } from "../types";
+import type { Message, ChatList, WSMessage, UserDB } from "../types";
 
 interface SocketContextType {
   messages: Message[];
   chatBox: ChatList[];
   isOtherUserTyping: boolean;
   isConnected: boolean;
+  searchUser: (target: string) => void;
   sendMessage: (receiverId: string | undefined, content: string) => void;
   sendTyping: (receiverId: string | undefined) => void;
   loadMessageHistory: (
     userId: string | undefined,
-    receiverId: string | undefined
+    receiverId: string | undefined,
+    before?: string
   ) => void;
   loadChatHistory: (targetId: string | undefined, content: string) => void;
+  resultSearchUser: UserDB[];
+  setResultSearchUser: (users: UserDB[]) => void;
+  clearResultSearchUser: () => void;
   clearMessages: () => void;
+  clearChat: () => void;
 }
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
@@ -30,6 +37,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatBox, setChatBox] = useState<ChatList[]>([]);
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
+  const [resultSearchUser, setResultSearchUser] = useState<UserDB[]>([]);
   const [isConnected, setIsConnected] = useState(false);
 
   const socketRef = useRef<WebSocket | null>(null);
@@ -103,15 +111,45 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         break;
 
       case "history_message":
-        // Transform server format to our Message format
         const formattedMessages: Message[] = data.content.map((msg) => ({
           message_id: msg.message_id,
           content: msg.content,
-          sender_id: msg.current_user, // Map current_user to sender_id
-          receiver_id: msg.other_user, // Map other_user to receiver_id
+          sender_id: msg.current_user,
+          receiver_id: msg.other_user,
           created_at: msg.created_at,
         }));
-        setMessages(formattedMessages);
+
+        setMessages((prev) => {
+          // 1. If we have no previous messages, this is a fresh load.
+          if (prev.length === 0) return formattedMessages;
+
+          // 2. SAFETY CHECK: Are these messages for the same chat room?
+          // We compare the participants of the *incoming* messages vs the *existing* messages.
+
+          const newMsg = formattedMessages[0];
+          const prevMsg = prev[0];
+
+          // Helper to create a unique ID for the conversation (e.g., "userA-userB")
+          // We sort IDs so that "A talking to B" is the same ID as "B talking to A"
+          const getChatId = (m: Message) =>
+            [m.sender_id, m.receiver_id].sort().join("-");
+
+          const newChatId = newMsg ? getChatId(newMsg) : null;
+          const prevChatId = prevMsg ? getChatId(prevMsg) : null;
+
+          // If the Chat IDs don't match, the user switched chats!
+          // We THROW AWAY the old 'prev' and just return the new messages.
+          if (newChatId && prevChatId && newChatId !== prevChatId) {
+            return formattedMessages;
+          }
+
+          // 3. If we are here, it's the same chat (Lazy Loading).
+          // Proceed with preventing duplicates and prepending.
+          const newIds = new Set(formattedMessages.map((m) => m.message_id));
+          const filteredPrev = prev.filter((m) => !newIds.has(m.message_id));
+
+          return [...formattedMessages, ...filteredPrev];
+        });
         break;
 
       case "message":
@@ -124,6 +162,13 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         setMessages((prev) => [...prev, newMessage]);
         setIsOtherUserTyping(false);
         break;
+
+      case "result":
+        const formattedUsers: UserDB[] = data?.content?.map((data) => ({
+          user_id: data?.user_id,
+          email: data?.email,
+        }));
+        setResultSearchUser(formattedUsers);
     }
   };
 
@@ -178,7 +223,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
   const loadMessageHistory = (
     userId: string | undefined,
-    receiverId: string | undefined
+    receiverId: string | undefined,
+    before?: string
   ) => {
     if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
       console.error("WebSocket is not connected");
@@ -195,7 +241,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         type: "message_history",
         sender_id: userId,
         receiver_id: receiverId,
-        content: "",
+        content: before || "",
       })
     );
   };
@@ -215,8 +261,24 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     );
   };
 
+  const searchUser = useCallback((user: string) => {
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    socketRef.current.send(JSON.stringify({ type: "search", search: user }));
+  }, []);
+
+  const clearResultSearchUser = () => {
+    setResultSearchUser([]);
+  };
+
   const clearMessages = () => {
     setMessages([]);
+  };
+
+  const clearChat = () => {
+    setChatBox([]);
   };
 
   return (
@@ -224,13 +286,18 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       value={{
         messages,
         chatBox,
+        resultSearchUser,
         isOtherUserTyping,
         isConnected,
+        setResultSearchUser,
         sendMessage,
         sendTyping,
+        clearChat,
         loadChatHistory,
         loadMessageHistory,
         clearMessages,
+        clearResultSearchUser,
+        searchUser,
       }}
     >
       {children}

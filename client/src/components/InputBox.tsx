@@ -4,6 +4,7 @@ import { useState } from "react";
 type InputBoxProps = {
   icon: LucideIcon;
   placeholder?: string;
+  placeholderClassName?: string;
   heightIcon?: number;
   widthIcon?: number;
   heightInputBox?: string;
@@ -16,6 +17,7 @@ type InputBoxProps = {
 export default function InputBox({
   icon: Icon,
   placeholder,
+  placeholderClassName,
   heightIcon,
   widthIcon,
   value,
@@ -41,9 +43,11 @@ export default function InputBox({
         type={show ? `text` : type}
         value={value}
         onChange={(e) => onChangeValue(e.target.value)}
-        className={`h-full text-white placeholder:text-slate-700 outline-0 ${
-          type === "password" ? `col-span-10` : `col-span-11`
-        } `}
+        className={`h-full text-white ${
+          placeholderClassName
+            ? `${placeholderClassName}`
+            : `placeholder:text-slate-700`
+        } outline-0 ${type === "password" ? `col-span-10` : `col-span-11`} `}
       />
 
       {type === "password" &&
