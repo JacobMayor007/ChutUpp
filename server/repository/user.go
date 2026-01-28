@@ -52,34 +52,25 @@ func (ub *UserDB) IsIdExist(id string) error {
 	return nil
 }
 
-func (ub *UserDB) SearchUser(idOrEmail string) ([]model.User, error) {
+func (ub *UserDB) SearchUser(searchTerm string) ([]model.User, error) {
+	// Explicitly select only the columns you need
+	query := `SELECT user_id, email FROM users WHERE user_id = $1 OR email ILIKE $2 LIMIT 20`
 
-	query := `SELECT * FROM users WHERE user_id = $1 or email = $1 LIMIT 20`
-
-	rows, err := ub.sqlDB.Db.Query(query, idOrEmail)
-
+	// Add % wildcards for a partial search
+	rows, err := ub.sqlDB.Db.Query(query, searchTerm, "%"+searchTerm+"%")
 	if err != nil {
 		return nil, err
 	}
-
-	var users []model.User
-
 	defer rows.Close()
+
+	users := make([]model.User, 0) // Ensures [] instead of null
 
 	for rows.Next() {
 		var u model.User
-
-		err := rows.Scan(
-			&u.UserUID,
-			&u.Email,
-		)
-
-		if err != nil {
+		if err := rows.Scan(&u.UserUID, &u.Email); err != nil {
 			return nil, err
 		}
-
 		users = append(users, u)
 	}
-
 	return users, nil
 }

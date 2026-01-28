@@ -13,7 +13,7 @@ export default function Chat() {
   const { logout } = useLogout();
   const { user } = useAuth();
   const { color, setColor } = useTheme();
-  const { messages, chatBox, isOtherUserTyping } = useSocket();
+  const { messages, isOtherUserTyping } = useSocket();
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
 
   return (
@@ -77,7 +77,7 @@ export default function Chat() {
             md:block md:col-span-4 lg:col-span-4
         `}
         >
-          <ChatBar setMobileView={setMobileView} chatBox={chatBox} />
+          <ChatBar setMobileView={setMobileView} />
         </div>
 
         <div
