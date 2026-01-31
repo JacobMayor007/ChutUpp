@@ -11,7 +11,7 @@ A real-time messaging application built with **Go**, **WebSocket**, and **WebRTC
 ###
 
 ###
-  But, in all honesty is that Mr. Primeagen voice is all I am hearing in my brain saying that "If I wanted to learn a new language, I want to learn first the language(I think he says here that the features?? or the learning curve?? Something about the language), and then the networking, and the TCP, etc.". So, thanks Mr.Primeagen you voice keeps me awake at night hehe. 
+  But, in all honesty is that Mr. Primeagen voice is all I am hearing in my brain saying that "If I wanted to learn a new language, I want to learn first the language(I think he says here that the features?? or the learning curve?? Something about the language), and then the networking, and the TCP, etc.". So, thanks Mr.Primeagen your voice keeps me awake at night hehe. 
 ###
 ###
   All in all, Go Language is I think the most fun language I have ever written, the simplicity of it, and all. Error handling (Yeah yeaahh I know). I love error handling, despite most developers hate the if's statements, buuuuttttt sttiilllll!!!! I lovee the language, and maybe I will explore it more, till I had enough of it and I will master this language.
