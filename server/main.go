@@ -1,9 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 	database "websocket_server/config"
 	"websocket_server/repository"
@@ -16,6 +21,12 @@ import (
 )
 
 var UserRepository *repository.UserDB
+var shutdownOnce sync.Once
+var shutdownComplete chan bool
+
+func init() {
+	shutdownComplete = make(chan bool)
+}
 
 func main() {
 	fmt.Printf("Main Server")
@@ -57,6 +68,13 @@ func main() {
 
 	st := NewStation(chatRepository, messRepository, userRepository)
 	go st.Run()
+
+	// Setup graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	go handleGracefulShutdown(sigChan, server, st, db)
+
 	server.Use("/ws", func(c *fiber.Ctx) error {
 		if websocket.IsWebSocketUpgrade(c) {
 			c.Locals("allowed", true)
@@ -102,4 +120,37 @@ func main() {
 	}))
 
 	log.Fatal(server.Listen(":8080"))
+}
+
+func handleGracefulShutdown(sigChan chan os.Signal, server *fiber.App, st *Station, db *database.PostgreDB) {
+	<-sigChan // Wait for shutdown signal
+
+	shutdownOnce.Do(func() {
+		log.Println("🛑 Graceful shutdown initiated...")
+
+		// Step 1: Close all WebSocket connections
+		log.Println("📴 Closing all WebSocket connections...")
+		st.Shutdown()
+
+		// Step 2: Wait a bit for connections to close
+		time.Sleep(1 * time.Second)
+
+		// Step 3: Close database connection
+		log.Println("🗄️  Closing database connection...")
+		if err := db.Db.Close(); err != nil {
+			log.Printf("Error closing database: %v", err)
+		}
+
+		// Step 4: Shutdown the Fiber server
+		log.Println("🚪 Shutting down HTTP server...")
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if err := server.ShutdownWithContext(ctx); err != nil {
+			log.Printf("Error shutting down server: %v", err)
+		}
+
+		log.Println("✅ Server shutdown complete")
+		shutdownComplete <- true
+	})
 }

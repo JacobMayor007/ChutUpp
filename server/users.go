@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/gofiber/contrib/websocket"
 )
@@ -20,6 +21,13 @@ func (u *User) ReadInjection() {
 		u.Station.UnRegister <- u
 		u.Conn.Close()
 	}()
+
+	// Set up ping handler to respond to pings with pongs
+	u.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	u.Conn.SetPongHandler(func(string) error {
+		u.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		return nil
+	})
 
 	for {
 		_, p, err := u.Conn.ReadMessage()
@@ -47,10 +55,26 @@ func (u *User) ReadInjection() {
 }
 
 func (u *User) WriteInjection() {
-	for con := range u.Send {
-		err := u.Conn.WriteJSON(con)
-		if err != nil {
-			break
+	ticker := time.NewTicker(45 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case con, ok := <-u.Send:
+			if !ok {
+				return
+			}
+			err := u.Conn.WriteJSON(con)
+			if err != nil {
+				return
+			}
+		case <-ticker.C:
+			// Send ping every 45 seconds
+			err := u.Conn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(time.Second))
+			if err != nil {
+				log.Printf("Failed to send ping: %v", err)
+				return
+			}
 		}
 	}
 }

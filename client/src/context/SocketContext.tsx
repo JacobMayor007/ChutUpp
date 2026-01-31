@@ -85,6 +85,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const currentCallPartnerRef = useRef<string | null>(null);
   const pendingOfferRef = useRef<RTCSessionDescriptionInit | null>(null);
+  const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null
+  );
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -102,6 +105,16 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
           content: "",
         })
       );
+
+      // Start heartbeat - send ping every 40 seconds
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+      }
+      heartbeatIntervalRef.current = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "ping" }));
+        }
+      }, 40000);
     };
 
     ws.onmessage = (event) => {
@@ -122,11 +135,17 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     ws.onclose = () => {
       setIsConnected(false);
       console.log("WebSocket disconnected");
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+      }
     };
 
     return () => {
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
+      }
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
       }
       cleanupCall();
       ws.close();
@@ -418,10 +437,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
   const handleCallAnswer = async (data: any) => {
     console.log("✅ Processing call answer");
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: callType === "video",
-      audio: true,
-    });
+
     console.log(localStream);
 
     if (peerConnectionRef.current) {
@@ -452,7 +468,6 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const handleCallRejected = () => {
-    alert("Call was rejected");
     cleanupCall();
   };
 
@@ -502,6 +517,13 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       remoteStream.getTracks().forEach((track) => track.stop());
     }
 
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.getSenders().forEach((sender) => {
+        if (sender.track) {
+          sender.track.stop();
+        }
+      });
+    }
     // Close peer connection
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
