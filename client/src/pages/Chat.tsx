@@ -75,7 +75,11 @@ export default function Chat() {
             muted
             autoPlay
             playsInline
-            className="w-full h-full object-cover"
+            style={{
+              transform: "scaleX(-1)",
+              WebkitTransform: "scaleX(-1)", // Support for Safari
+            }}
+            className="w-full h-full object-cover "
           />
         </div>
       )}
