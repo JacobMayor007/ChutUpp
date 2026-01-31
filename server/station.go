@@ -269,3 +269,34 @@ func (s *Station) emit(userID string, msg Content) {
 		log.Printf("User %s not found or offline", userID)
 	}
 }
+
+// Shutdown gracefully closes all user connections
+func (s *Station) Shutdown() {
+	s.mx.Lock()
+	defer s.mx.Unlock()
+
+	log.Printf("Closing connections for %d users", len(s.Users))
+
+	// Send disconnect message to all users before closing
+	for userID, user := range s.Users {
+		log.Printf("Closing connection for user: %s", userID)
+
+		// Send disconnect notification
+		disconnectMsg := Content{
+			Type:    "disconnect",
+			Message: "Server shutting down",
+		}
+
+		select {
+		case user.Send <- disconnectMsg:
+		case <-time.After(100 * time.Millisecond):
+		}
+
+		// Close the WebSocket connection
+		user.Conn.Close()
+	}
+
+	// Clear users map
+	s.Users = make(map[string]*User)
+	log.Println("All connections closed")
+}
