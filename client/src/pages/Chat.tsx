@@ -1,4 +1,12 @@
-import { LogOut, MessageCircle, Moon, Sun, ArrowLeft } from "lucide-react";
+import {
+  LogOut,
+  MessageCircle,
+  Moon,
+  Sun,
+  ArrowLeft,
+  Video,
+  VideoOff,
+} from "lucide-react";
 import ChatBar from "../components/ChatBar";
 import Message from "../components/Message";
 import { useLogout } from "../hooks/auth/authHooks";
@@ -6,7 +14,7 @@ import { useTheme } from "../context/ThemeContext";
 import DivBox from "../components/DivBox";
 import MyText from "../components/MyText";
 import { useAuth } from "../context/AuthContext";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react"; // Added useRef
 import { useSocket } from "../context/SocketContext";
 
 export default function Chat() {
@@ -16,8 +24,62 @@ export default function Chat() {
   const { messages, isOtherUserTyping } = useSocket();
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
 
+  // Use a ref instead of document.getElementById
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+
+  const openVideoHandle = async () => {
+    try {
+      const localStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: true,
+      });
+
+      setStream(localStream);
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = localStream;
+        // Ensure the video plays once the stream is loaded
+        videoRef.current.play();
+      }
+    } catch (error) {
+      console.error("Error accessing media devices.", error);
+    }
+  };
+
+  const closeVideoHandle = () => {
+    if (stream) {
+      // 1. Get all tracks (audio and video) and stop them
+      stream.getTracks().forEach((track) => {
+        track.stop();
+      });
+
+      // 2. Clear the state so the video UI disappears
+      setStream(null);
+    }
+  };
+
+  useEffect(() => {
+    if (stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream]);
+
   return (
     <DivBox className="h-screen flex flex-col px-4 py-4 md:px-10 md:py-6">
+      {/* Local Video Preview - Styled to be a floating overlay or hidden if no stream */}
+      {stream && (
+        <div className="fixed bottom-20 right-10 z-50 border-2 border-blue-500 rounded-lg overflow-hidden w-48 h-36 shadow-xl">
+          <video
+            ref={videoRef}
+            muted
+            autoPlay
+            playsInline
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+
       <div className="flex flex-row justify-between items-center mb-4 h-12 shrink-0">
         <div className="md:hidden">
           {mobileView === "chat" ? (
@@ -36,6 +98,14 @@ export default function Chat() {
         </div>
 
         <div className="flex flex-row items-center gap-4 ml-auto">
+          {/* Video Toggle Button */}
+
+          {stream ? (
+            <VideoOff onClick={closeVideoHandle} />
+          ) : (
+            <Video onClick={openVideoHandle} />
+          )}
+
           <MyText
             label={user?.email}
             size="lg"
