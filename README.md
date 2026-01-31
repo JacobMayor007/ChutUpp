@@ -1,8 +1,29 @@
-# Pet Care Pro v2 - Mini Messenger
+# My Mini Messenger
 
 A real-time messaging application built with **Go**, **WebSocket**, and **WebRTC** for learning purposes. This is a 1-to-1 chat application with video/audio calling capabilities.
 
 ## 📚 Learning Objectives
+
+## Reason
+
+```
+  I wanted to learn Go Programming language, also websocket, and webRTC. So, building a simple Chat Application is the entry of the learning curve to understand what is websocket, how really to use it, manipulate it, what is really behind the realtime communication, and how does messenger does it's thing.
+```
+
+```
+  But, in all honesty is that Mr. Primeagen voice is all I am hearing in my brain saying that "If I wanted to learn a new language, I want to learn first the language(I think he says here that the features?? or the learning curve?? Something about the language), and then the networking, and the TCP, etc.". So, thanks Mr.Primeagen you voice keeps me awake at night hehe. 
+```
+```
+  All in all, Go Language is I think the most fun language I have ever written, the simplicity of it, and all. Error handling (Yeah yeaahh I know). I love error handling, despite most developers hate the if's statements, buuuuttttt sttiilllll!!!! I lovee the language, and maybe I will explore it more, till I had enough of it and I will master this language.
+```
+
+```
+  You can rate this repository, you can hate it, you can love it. This is my learning curve of Go, Websocket, and WebRTC. I don't care.
+```
+
+```
+  Most of the hardest parts are vibe coded, and also all of it are refactored by Claude code, and Gemini, for improvements of the code.
+```
 
 This project demonstrates:
 
