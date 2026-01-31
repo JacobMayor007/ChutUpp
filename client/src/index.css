@@ -64,3 +64,7 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #ac8eff;
 }
+
+.mirrored-video {
+  transform: scaleX(-1);
+}

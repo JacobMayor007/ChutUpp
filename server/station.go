@@ -14,6 +14,12 @@ type Content struct {
 	ClientID   string    `json:"user_id"`
 	ReceiverID string    `json:"receiver_id"`
 	CreatedAt  time.Time `json:"created_at"`
+	// WebRTC specific fields
+	CallType  string `json:"call_type,omitempty"`  // "video" or "audio"
+	Offer     any    `json:"offer,omitempty"`      // RTCSessionDescription
+	Answer    any    `json:"answer,omitempty"`     // RTCSessionDescription
+	Candidate any    `json:"candidate,omitempty"`  // RTCIceCandidate
+	FromEmail string `json:"from_email,omitempty"` // Caller's email for display
 }
 
 type Station struct {
@@ -77,54 +83,22 @@ func (s *Station) Run() {
 
 				if !ok {
 					log.Printf("Warning: Received non-string message from %s", msg.ClientID)
-					continue // Skip this message instead of crashing
+					continue
 				}
 
-				// Save to DB using the safe string
+				// Save to DB
 				if _, err := s.ChatRepo.SendMessage(msg.ClientID, msg.ReceiverID, contentStr); err != nil {
 					log.Printf("Error saving message: %s", err)
 					continue
 				}
-				// Find Receiver and Send
-				s.mx.RLock()
-				receiver, ok := s.Users[msg.ReceiverID]
-				s.mx.RUnlock()
 
-				if ok {
-					select {
-					case receiver.Send <- msg:
-						log.Printf("Message routed from %s to %s", msg.ClientID, msg.ReceiverID)
-					default:
-						close(receiver.Send)
-						s.mx.Lock()
-						delete(s.Users, msg.ReceiverID)
-						s.mx.Unlock()
-					}
-				} else {
-					log.Printf("Message failed: Recipient %s is offline", msg.ReceiverID)
-				}
+				// Route to receiver
+				s.emit(msg.ReceiverID, msg)
 
 			case "typing":
-				s.mx.RLock()
-				receiver, ok := s.Users[msg.ReceiverID]
-				s.mx.RUnlock()
+				s.emit(msg.ReceiverID, msg)
 
-				if ok {
-					select {
-					case receiver.Send <- msg:
-						log.Printf("Message routed from %s to %s", msg.ClientID, msg.ReceiverID)
-					default:
-						close(receiver.Send)
-						s.mx.Lock()
-						delete(s.Users, msg.ReceiverID)
-						s.mx.Unlock()
-					}
-				} else {
-					log.Printf("Message failed: Recipient %s is offline", msg.ReceiverID)
-				}
 			case "chat":
-				// 1. Fetch from DB
-
 				log.Printf("Receiver Id: %s", msg.ReceiverID)
 
 				chatsSender, err := s.ChatRepo.GetChats(msg.ClientID)
@@ -138,34 +112,30 @@ func (s *Station) Run() {
 					log.Printf("Error fetching history: %s", err)
 					continue
 				}
-				// 3. Construct response for the REQUESTER
+
 				response := Content{
-					Type:       "history",   // Use a distinct type so frontend knows to parse it
-					Message:    chatsSender, // The actual data
+					Type:       "history",
+					Message:    chatsSender,
 					ClientID:   "server",
 					ReceiverID: msg.ClientID,
 					CreatedAt:  time.Now(),
 				}
 
 				response2 := Content{
-					Type:       "history",     // Use a distinct type so frontend knows to parse it
-					Message:    chatsReceiver, // The actual data
+					Type:       "history",
+					Message:    chatsReceiver,
 					ClientID:   "server",
 					ReceiverID: msg.ReceiverID,
 					CreatedAt:  time.Now(),
 				}
 
-				// 4. Send back to the SENDER (The person who asked for history)
-
 				s.emit(msg.ClientID, response)
 				if msg.ReceiverID != "" && msg.ReceiverID != msg.ClientID {
-
 					s.emit(msg.ReceiverID, response2)
 				}
 
 			case "message_history":
 				log.Printf("Current User Id: %s", msg.ClientID)
-				log.Printf("Type: %s", msg.Type)
 
 				before := msg.Message.(string)
 
@@ -176,8 +146,8 @@ func (s *Station) Run() {
 				}
 
 				response := Content{
-					Type:       "history_message",   // Use a distinct type so frontend knows to parse it
-					Message:    currentUserMessages, // The actual data
+					Type:       "history_message",
+					Message:    currentUserMessages,
 					ClientID:   "server",
 					ReceiverID: msg.ClientID,
 					CreatedAt:  time.Now(),
@@ -190,21 +160,94 @@ func (s *Station) Run() {
 				log.Printf("Data: %s", msg.Search)
 
 				searchUser, err := s.UserRepo.SearchUser(msg.Search)
-
 				if err != nil {
-					log.Println("There is an error occured in searching user")
-					return
+					log.Println("Error occurred in searching user")
+					continue
 				}
 
 				response := Content{
-					Type:       "result",   // Use a distinct type so frontend knows to parse it
-					Message:    searchUser, // The actual data
+					Type:       "result",
+					Message:    searchUser,
 					ClientID:   "server",
 					ReceiverID: msg.ClientID,
 					CreatedAt:  time.Now(),
 				}
 
 				s.emit(msg.ClientID, response)
+
+			// ===== WebRTC SIGNALING MESSAGES =====
+
+			case "call_initiate":
+				// Forward call initiation to receiver
+				log.Printf("Call initiate: %s -> %s (type: %s)", msg.ClientID, msg.ReceiverID, msg.CallType)
+
+				// Get caller email from database
+
+				response := Content{
+					Type:       "call_initiate",
+					ClientID:   msg.ClientID,
+					ReceiverID: msg.ReceiverID,
+					CallType:   msg.CallType,
+					Offer:      msg.Offer,
+					CreatedAt:  time.Now(),
+				}
+
+				log.Printf("Emitting call_initiate to %s", msg.ReceiverID)
+				s.emit(msg.ReceiverID, response)
+
+			case "call_answer":
+				// Forward call answer to initiator
+				log.Printf("Call answer: %s -> %s", msg.ClientID, msg.ReceiverID)
+
+				response := Content{
+					Type:       "call_answer",
+					ClientID:   msg.ClientID,
+					ReceiverID: msg.ReceiverID,
+					Answer:     msg.Answer,
+					CreatedAt:  time.Now(),
+				}
+
+				s.emit(msg.ReceiverID, response)
+
+			case "call_reject":
+				// Forward call rejection to initiator
+				log.Printf("Call rejected: %s -> %s", msg.ClientID, msg.ReceiverID)
+
+				response := Content{
+					Type:       "call_reject",
+					ClientID:   msg.ClientID,
+					ReceiverID: msg.ReceiverID,
+					CreatedAt:  time.Now(),
+				}
+
+				s.emit(msg.ReceiverID, response)
+
+			case "call_end":
+				// Forward call end to other party
+				log.Printf("Call ended: %s -> %s", msg.ClientID, msg.ReceiverID)
+
+				response := Content{
+					Type:       "call_end",
+					ClientID:   msg.ClientID,
+					ReceiverID: msg.ReceiverID,
+					CreatedAt:  time.Now(),
+				}
+
+				s.emit(msg.ReceiverID, response)
+
+			case "ice_candidate":
+				// Forward ICE candidate to peer
+				log.Printf("ICE candidate: %s -> %s", msg.ClientID, msg.ReceiverID)
+
+				response := Content{
+					Type:       "ice_candidate",
+					ClientID:   msg.ClientID,
+					ReceiverID: msg.ReceiverID,
+					Candidate:  msg.Candidate,
+					CreatedAt:  time.Now(),
+				}
+
+				s.emit(msg.ReceiverID, response)
 			}
 		}
 	}
@@ -218,10 +261,11 @@ func (s *Station) emit(userID string, msg Content) {
 	if ok {
 		select {
 		case user.Send <- msg:
-			log.Printf("Chats go to: %s", userID)
+			log.Printf("Message delivered to: %s", userID)
 		case <-time.After(time.Millisecond * 50):
-			// If the user's channel is full/blocked, don't hang the whole server
 			log.Printf("Slow consumer: skipping message for %s", userID)
 		}
+	} else {
+		log.Printf("User %s not found or offline", userID)
 	}
 }

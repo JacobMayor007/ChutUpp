@@ -1,4 +1,4 @@
-import { Send, Loader2 } from "lucide-react"; // Import Loader2
+import { Send, Loader2, Video, Phone } from "lucide-react";
 import MessageBox from "./InputMessage";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Message } from "../types";
@@ -9,6 +9,8 @@ import DivBox from "./DivBox";
 import MyText from "./MyText";
 import Button from "./Button";
 import SearchUser from "./SearchUser";
+import IncomingCallModal from "./IncomingCallModal";
+import CallModal from "./CallModal";
 
 type MessageProps = {
   user: User | null;
@@ -22,33 +24,34 @@ export default function Message({
   user,
 }: MessageProps) {
   const [content, setContent] = useState("");
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false); // Track loading state
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null); // Ref for the scrollable container
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const topObserverRef = useRef<HTMLDivElement | null>(null);
   const lastMessageIdRef = useRef<string | null>(null);
-
-  // To calculate scroll jump
   const prevScrollHeightRef = useRef<number>(0);
 
-  const { sendMessage, sendTyping, loadMessageHistory } = useSocket();
+  const {
+    sendMessage,
+    sendTyping,
+    loadMessageHistory,
+    initiateCall,
+    isInCall,
+    incomingCall,
+  } = useSocket();
   const { otherUser } = useChatContext();
 
-  // 1. Handle Scroll Position Maintenance (The "Smooth" Logic)
+  // Handle Scroll Position Maintenance
   useLayoutEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    // Calculate how much the height changed
     const currentScrollHeight = container.scrollHeight;
     const heightDifference = currentScrollHeight - prevScrollHeightRef.current;
 
-    // If height increased (old messages added) AND we weren't at the bottom
-    // Shift the scroll position down by the height difference so visual position stays static
     if (heightDifference > 0 && prevScrollHeightRef.current > 0) {
-      // Only adjust if we are loading history (not sending new message)
       const isNewMessage =
         messages[messages.length - 1]?.message_id !== lastMessageIdRef.current;
 
@@ -60,22 +63,20 @@ export default function Message({
     prevScrollHeightRef.current = currentScrollHeight;
   }, [messages]);
 
-  // 2. Handle Auto-Scroll to Bottom for New Messages
+  // Handle Auto-Scroll to Bottom for New Messages
   useEffect(() => {
     if (!messages.length) return;
     const lastMessage = messages[messages.length - 1];
 
-    // Check if the latest message is actually new (not history)
     const isNewMessage = lastMessage.message_id !== lastMessageIdRef.current;
 
     if (isNewMessage && messagesEndRef.current) {
-      // Simple smooth scroll to bottom for live chat
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
       lastMessageIdRef.current = lastMessage.message_id || "";
     }
   }, [messages]);
 
-  // 3. The Infinite Scroll Trigger
+  // Infinite Scroll Trigger
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -84,15 +85,11 @@ export default function Message({
           otherUser?.user_id &&
           messages.length > 0
         ) {
-          setIsLoadingHistory(true); // Show spinner
+          setIsLoadingHistory(true);
           const oldestTimestamp = messages[0]?.created_at;
 
-          // Slight delay to allow spinner to show (optional UX preference)
-          // or just call immediately
           loadMessageHistory(user?.uid, otherUser.user_id, oldestTimestamp);
 
-          // We turn off loading in a useEffect when messages change, or here via timeout
-          // Ideally, pass a callback to loadMessageHistory, but for now:
           setTimeout(() => setIsLoadingHistory(false), 1000);
         }
       },
@@ -114,16 +111,52 @@ export default function Message({
     setContent("");
   };
 
+  const handleVideoCall = () => {
+    if (otherUser?.user_id) {
+      initiateCall(otherUser.user_id, "video");
+    }
+  };
+
+  const handleAudioCall = () => {
+    if (otherUser?.user_id) {
+      initiateCall(otherUser.user_id, "audio");
+    }
+  };
+
   return (
-    <div className="h-full bg-[#1c1e21] rounded-xl flex flex-col">
+    <div className="h-full bg-[#1c1e21] rounded-xl flex flex-col relative">
+      {/* Incoming Call Modal */}
+      {incomingCall && <IncomingCallModal />}
+
+      {/* Active Call Modal */}
+      {isInCall && <CallModal />}
+
       {otherUser?.user_id ? (
         <div className="h-full p-4 grid grid-rows-[auto_1fr_auto] gap-4">
-          {/* Header */}
-          <h1 className="text-white font-bold">
-            Chat with User {otherUser?.email}
-          </h1>
+          {/* Header with Call Buttons */}
+          <div className="flex items-center justify-between">
+            <h1 className="text-white font-bold">
+              Chat with User {otherUser?.email}
+            </h1>
+            <div className="flex gap-2">
+              <button
+                onClick={handleAudioCall}
+                className="p-2 bg-green-600 hover:bg-green-700 rounded-full transition-colors"
+                title="Audio Call"
+              >
+                <Phone className="w-5 h-5 text-white" />
+              </button>
+              <button
+                onClick={handleVideoCall}
+                className="p-2 bg-blue-600 hover:bg-blue-700 rounded-full transition-colors"
+                title="Video Call"
+              >
+                <Video className="w-5 h-5 text-white" />
+              </button>
+            </div>
+          </div>
 
-          {/* Chat Area - Note the ref is on the wrapper now */}
+          {/* Chat Area */}
           <div
             ref={scrollContainerRef}
             className="overflow-y-scroll px-4 space-y-2 [overflow-anchor:auto]"
