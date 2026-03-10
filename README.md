@@ -22,7 +22,7 @@ A real-time messaging application built with **Go**, **WebSocket**, and **WebRTC
 ###
 
 ###
-  Most of the hardest parts are vibe coded, and also all of it are refactored by Claude code, and Gemini, for improvements of the code.
+  Most of the hardest parts are all me, but I modified and refactored by Claude code, and Gemini, for improvements of the code.
 ###
 
 This project demonstrates:
