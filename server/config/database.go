@@ -17,7 +17,9 @@ func NewPostgreDB() (*PostgreDB, error) {
 	connStr := os.Getenv("DATABASE_URL")
 	if connStr == "" {
 		password := os.Getenv("PASSWORD")
-		connStr = "user=chut_upp_user dbname=chut_upp password=" + password + " sslmode=disable"
+		db_name := os.Getenv("DB_NAME")
+		user_name := os.Getenv("USER_NAME")
+		connStr = "user=" + user_name + " dbname=" + db_name + " password=" + password + " sslmode=disable"
 	}
 
 	db, err := sql.Open("postgres", connStr)
