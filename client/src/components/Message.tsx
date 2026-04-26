@@ -80,16 +80,18 @@ export default function Message({
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
+        const container = scrollContainerRef.current;
+        // ✅ Guard: only fire when user has scrolled near the top
         if (
           entries[0].isIntersecting &&
           otherUser?.user_id &&
-          messages.length > 0
+          messages.length > 0 &&
+          container &&
+          container.scrollTop < 100 // <-- add this
         ) {
           setIsLoadingHistory(true);
           const oldestTimestamp = messages[0]?.created_at;
-
           loadMessageHistory(user?.uid, otherUser.user_id, oldestTimestamp);
-
           setTimeout(() => setIsLoadingHistory(false), 1000);
         }
       },
