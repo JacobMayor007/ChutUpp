@@ -13,8 +13,13 @@ type PostgreDB struct {
 }
 
 func NewPostgreDB() (*PostgreDB, error) {
-	password := os.Getenv("PASSWORD")
-	connStr := "user=postgres dbname=websocketdb password=" + password + " sslmode=disable"
+
+	connStr := os.Getenv("DATABASE_URL")
+	if connStr == "" {
+		password := os.Getenv("PASSWORD")
+		connStr = "user=chut_upp_user dbname=chut_upp password=" + password + " sslmode=disable"
+	}
+
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		return nil, err
