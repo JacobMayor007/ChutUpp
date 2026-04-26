@@ -45,6 +45,11 @@ func (pb *PostgreDB) Init() error {
 		return err
 	}
 
+	// Create the set_timestamp function first
+	if err := pb.createTimestampFunction(); err != nil {
+		return err
+	}
+
 	if err := pb.createUserTable(); err != nil {
 		return err
 	}
@@ -61,6 +66,24 @@ func (pb *PostgreDB) Init() error {
 		return err
 	}
 
+	return nil
+}
+
+func (pb *PostgreDB) createTimestampFunction() error {
+	query := `
+		CREATE OR REPLACE FUNCTION set_timestamp()
+		RETURNS TRIGGER AS $$
+		BEGIN
+			NEW.updated_at = NOW();
+			RETURN NEW;
+		END;
+		$$ LANGUAGE plpgsql;
+	`
+	_, err := pb.Db.Exec(query)
+	if err != nil {
+		fmt.Printf("error creating set_timestamp function: %v\n", err)
+		return err
+	}
 	return nil
 }
 
