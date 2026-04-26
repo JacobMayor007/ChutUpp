@@ -92,7 +92,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (!user?.uid) return;
 
-    const ws = new WebSocket(`ws://localhost:8080/ws?userId=${user.uid}`);
+    const ws = new WebSocket(
+      `${import.meta.env.VITE_WEBSOCKET_URL}/ws?userId=${user.uid}`
+    );
     socketRef.current = ws;
 
     ws.onopen = () => {
