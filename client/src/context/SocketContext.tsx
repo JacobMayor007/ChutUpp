@@ -92,7 +92,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (!user?.uid) return;
 
-    const ws = new WebSocket(`ws://localhost:8080/ws?userId=${user.uid}`);
+    const ws = new WebSocket(
+      `wss://chutupp.onrender.com/ws?userId=${user.uid}`
+    );
     socketRef.current = ws;
 
     ws.onopen = () => {
