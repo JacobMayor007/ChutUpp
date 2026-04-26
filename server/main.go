@@ -47,10 +47,8 @@ func main() {
 		}, ","),
 	}))
 
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error on loading env data")
-	}
+	// Load .env file if it exists (optional for deployed environments)
+	godotenv.Load()
 
 	db, err := database.NewPostgreDB()
 	if err != nil {
