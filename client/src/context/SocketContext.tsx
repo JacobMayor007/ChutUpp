@@ -93,7 +93,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     if (!user?.uid) return;
 
     const ws = new WebSocket(
-      `wss://chutupp.onrender.com/ws?userId=${user.uid}`
+      `${import.meta.env.VITE_WEBSOCKET_URL}/ws?userId=${user.uid}`
     );
     socketRef.current = ws;
 
