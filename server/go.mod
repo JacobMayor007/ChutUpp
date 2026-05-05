@@ -1,6 +1,6 @@
 module websocket_server
 
-go 1.25.0
+go 1.24.3
 
 require (
 	github.com/gofiber/fiber/v2 v2.52.10
