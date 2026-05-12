@@ -45,6 +45,15 @@ This project demonstrates:
 - **Firebase Authentication**: User identity management
 - **PostgreSQL**: Data persistence
 
+## DEMO
+
+---
+
+<video src="./Demo.mp4" controls width="800">
+  Your browser does not support the video tag.
+</video>
+---
+
 ---
 
 ## 🏗️ Architecture Overview
