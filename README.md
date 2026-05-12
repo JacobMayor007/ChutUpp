@@ -49,10 +49,7 @@ This project demonstrates:
 
 ---
 
-<video src="./Demo.mp4" controls width="800">
-  Your browser does not support the video tag.
-</video>
----
+## [Click here to watch the demo](Demo.mp4)
 
 ---
 
